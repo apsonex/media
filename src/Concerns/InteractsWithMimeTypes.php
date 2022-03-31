@@ -1,6 +1,6 @@
 <?php
 
-namespace Apsonex\Media\Tests\Concerns;
+namespace Apsonex\Media\Concerns;
 
 
 use Illuminate\Support\Arr;

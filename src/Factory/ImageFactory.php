@@ -23,7 +23,7 @@ class ImageFactory
     /**
      * Factory options
      */
-    protected array $options = [
+    public array $options = [
         'driver'    => 'imagick',
         'path'      => null,
         'directory' => null,
@@ -36,24 +36,24 @@ class ImageFactory
     /**
      * Image instance
      */
-    protected Image $image;
+    public Image $image;
 
     /**
      * Full target path of the images.
      * If not provided we will make one.
      */
-    protected ?string $targetPath;
+    public ?string $targetPath;
 
     /**
      * Storage Disk
      */
-    protected Filesystem $disk;
+    public Filesystem $disk;
 
 
     /**
      * Variation Data
      */
-    protected array $variationsData = [
+    public array $variationsData = [
         'data'  => null,
         'queue' => false,
     ];
@@ -169,7 +169,7 @@ class ImageFactory
             'path'      => $providedPath->toString(),
             'directory' => $providedPath->dirname()->is('.') ? null : $providedPath->dirname()->toString(),
             'basename'  => $providedPath->basename()->beforeLast('.')->toString(),
-            'filename'  => $providedPath->basename(),
+            'filename'  => $providedPath->basename()->toString(),
             'extension' => $this->extension(),
         ]);
     }
@@ -207,15 +207,11 @@ class ImageFactory
 
         $tempDir->delete();
 
-        return ImageResult::make([
-            'path'      => $this->options['path'],
-            'directory' => $this->options['directory'],
-            'filename'  => $this->options['filename'],
-            'basename'  => $this->options['basename'],
-            'extension' => $this->options['extension'],
-            'optimize'  => true,
-            'mime'      => $this->options['mime'],
-            'size'      => (int)$this->disk->size($this->options['path']),
+        return $this->imageResults([
+            'optimize' => true,
+            'width'    => $this->image->width(),
+            'height'   => $this->image->height(),
+            'size'     => (int)$this->disk->size($this->options['path']),
         ]);
     }
 
@@ -226,7 +222,25 @@ class ImageFactory
     {
         $this->disk->put($path, $img);
 
-        return ImageResult::make([]);
+        return $this->imageResults([
+            'optimize' => false,
+            'width'    => $this->image->width(),
+            'height'   => $this->image->height(),
+            'size'     => (int)$this->disk->size($this->options['path']),
+        ]);
+    }
+
+    protected function imageResults($overrides = [])
+    {
+        return ImageResult::make(
+            array_merge(
+                $this->options,
+                [
+                    'disk' => $this->disk->getConfig()['driver']
+                ],
+                $overrides,
+            )
+        );
     }
 
     /**
@@ -260,5 +274,14 @@ class ImageFactory
         } catch (Exception $e) {
             throw new Exception("Image source in not readable @ ImageFactory." . $e->getMessage());
         }
+    }
+
+    /**
+     * Modify Intervention Image Instance
+     */
+    public function modifyImage($callback): static
+    {
+        $this->image = $callback($this->image);
+        return $this;
     }
 }

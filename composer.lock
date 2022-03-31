@@ -4827,12 +4827,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:apsonex/mls-data.git",
-                "reference": "2c50c56d5863549e323c4b6ede0494222bbdfb8f"
+                "reference": "752e693c6bb233f3bb196475de34a5f5ae54e16f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/apsonex/mls-data/zipball/2c50c56d5863549e323c4b6ede0494222bbdfb8f",
-                "reference": "2c50c56d5863549e323c4b6ede0494222bbdfb8f",
+                "url": "https://api.github.com/repos/apsonex/mls-data/zipball/752e693c6bb233f3bb196475de34a5f5ae54e16f",
+                "reference": "752e693c6bb233f3bb196475de34a5f5ae54e16f",
                 "shasum": ""
             },
             "require": {
@@ -4869,7 +4869,7 @@
                 "source": "https://github.com/apsonex/mls-data/tree/main",
                 "issues": "https://github.com/apsonex/mls-data/issues"
             },
-            "time": "2022-02-16T13:55:48+00:00"
+            "time": "2022-03-31T19:55:05+00:00"
         },
         {
             "name": "apsonex/rets",
@@ -8554,5 +8554,5 @@
         "php": "^8.1"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.2.0"
+    "plugin-api-version": "2.3.0"
 }

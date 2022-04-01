@@ -3,7 +3,9 @@
 namespace Apsonex\Media\Factory;
 
 
+use Apsonex\Media\Actions\ImageOptimizeAction;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
@@ -11,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Concerns\InteractsWithOptimizer;
 use Apsonex\Media\Concerns\InteractsWithMimeTypes;
+use Apsonex\Media\Actions\MakeImageVariationsAction;
 use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
 
 class ImageFactory
@@ -22,9 +25,14 @@ class ImageFactory
 
     protected string $interventionDriver = 'imagick';
 
-    protected bool $triggerOptimization = false;
+    protected bool|string $triggerOptimization = false;
 
     protected int $exportQuality = 75;
+
+    protected array $optimizationOptions = [
+        'quality'         => 85,
+        'onFinishTrigger' => null,
+    ];
 
     /**
      * Factory options
@@ -162,9 +170,10 @@ class ImageFactory
     /**
      * Configure to do optimization
      */
-    public function optimize(): static
+    public function optimize($queue = false, $optimizationOptions = []): static
     {
-        $this->triggerOptimization = true;
+        $this->triggerOptimization = $queue ? 'queue' : true;
+        $this->optimizationOptions = array_merge($this->optimizationOptions, $optimizationOptions);
         return $this;
     }
 
@@ -179,13 +188,13 @@ class ImageFactory
 
         $this->options['variations']['original'] = $this->saveToDisk();
 
-        return array_merge($this->baseAttributes(), [
+        $data = array_merge($this->baseAttributes(), [
             'variations' => $this->options['variations']
         ]);
 
-        //        return $this->needOptimization() ?
-        //            $this->optimizeAndSaveToDisk() :
-        //            $this->saveToDisk($this->options['path'], $this->image);
+        $this->optimizeIfRequested($data);
+
+        return $data;
     }
 
     /**
@@ -209,13 +218,6 @@ class ImageFactory
             'height'    => $this->image->height(),
             'optimize'  => false,
         ];
-
-        //        return $this->imageResults([
-        //            'optimize' => false,
-        //            'width'    => $this->image->width(),
-        //            'height'   => $this->image->height(),
-        //            'size'     => (int)$this->disk->size($this->options['path']),
-        //        ]);
     }
 
     /**
@@ -234,7 +236,9 @@ class ImageFactory
 
     protected function ensureValidPath()
     {
-        $pathinfo = pathinfo($this->options['path'] ??= $this->randomName());
+        $pathinfo = pathinfo(
+            trim($this->options['path'] ??= $this->randomName(), '/')
+        );
 
         $dirname = $pathinfo['dirname'] === '.' ? null : $pathinfo['dirname'];
 
@@ -261,44 +265,6 @@ class ImageFactory
     protected function extension(): string
     {
         return static::guessExtensionFromMimeType($this->image->mime());
-    }
-    //    /**
-    //     * Optimize and save
-    //     */
-    //    protected function optimizeAndSaveToDisk(): ImageResult
-    //    {
-    //        $tempDir = $this->temporaryDirectory();
-    //
-    //        $tempPath = $tempDir->path(Str::uuid() . '.' . $this->extension());
-    //
-    //        $this->image->save($tempPath);
-    //
-    //        $this->optimizer()->optimize($tempPath);
-    //
-    //        $this->saveToDisk($this->options['path'], File::get($tempPath));
-    //
-    //        $tempDir->delete();
-    //
-    //        return $this->imageResults([
-    //            'optimize' => true,
-    //            'width'    => $this->image->width(),
-    //            'height'   => $this->image->height(),
-    //            'size'     => (int)$this->disk->size($this->options['path']),
-    //        ])->toArray();
-
-    //    }
-
-    protected function imageResults($overrides = [])
-    {
-        return ImageResult::make(
-            array_merge(
-                $this->options,
-                [
-                    'disk' => $this->disk->getConfig()['driver']
-                ],
-                $overrides,
-            )
-        );
     }
 
     /**
@@ -354,5 +320,38 @@ class ImageFactory
             'mime'       => $this->options['mime'],
             'optimize'   => false,
         ];
+    }
+
+    /**
+     * Trigger optimization
+     * We will queue it if $triggerOptimization === 'queue'
+     * else invoke inline
+     */
+    protected function optimizeIfRequested($data)
+    {
+        if (!$this->triggerOptimization) return;
+
+        $data = [
+            'srcDisk'          => $this->disk->getConfig()['driver'],
+            'from'             => null,
+            'to'               => null,
+            'targetDisk'       => null,
+            'quality'          => $this->optimizationOptions['quality'],
+            'onFinishCallback' => $this->optimizationOptions['onFinishTrigger'] ?? null
+        ];
+
+        collect($data['variations'])
+            ->when($this->triggerOptimization === 'queue', function (Collection $variations) use ($data) {
+                $variations->each(function ($variation) use ($data) {
+                    $data = array_merge($data, ['from' => $variation['path']]);
+                    ImageOptimizeAction::queue(...$data);
+                });
+            })
+            ->when($this->triggerOptimization !== 'queue', function (Collection $variations) use ($data) {
+                $variations->each(function ($variation) use ($data) {
+                    $data = array_merge($data, ['from' => $variation['path']]);
+                    ImageOptimizeAction::make(...$data)->optimize();
+                });
+            });
     }
 }

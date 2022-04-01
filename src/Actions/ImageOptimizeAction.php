@@ -2,23 +2,25 @@
 
 namespace Apsonex\Media\Actions;
 
-use Apsonex\Media\Concerns\InteractsWithMimeTypes;
-use Apsonex\Media\Concerns\InteractsWithOptimizer;
-use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Spatie\ImageOptimizer\OptimizerChain;
+use Spatie\ImageOptimizer\Optimizers\Svgo;
 use Spatie\ImageOptimizer\Optimizers\Cwebp;
-use Spatie\ImageOptimizer\Optimizers\Gifsicle;
-use Spatie\ImageOptimizer\Optimizers\Jpegoptim;
 use Spatie\ImageOptimizer\Optimizers\Optipng;
 use Spatie\ImageOptimizer\Optimizers\Pngquant;
-use Spatie\ImageOptimizer\Optimizers\Svgo;
-use Spatie\LaravelImageOptimizer\OptimizerChainFactory;
+use Spatie\ImageOptimizer\Optimizers\Gifsicle;
+use Spatie\ImageOptimizer\Optimizers\Jpegoptim;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Spatie\TemporaryDirectory\TemporaryDirectory;
+use Apsonex\Media\Concerns\HasSerializedCallback;
+use Apsonex\Media\Concerns\InteractsWithMimeTypes;
+use Apsonex\Media\Concerns\InteractsWithOptimizer;
+use Spatie\LaravelImageOptimizer\OptimizerChainFactory;
+use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
 
 class ImageOptimizeAction
 {
@@ -26,35 +28,56 @@ class ImageOptimizeAction
     use InteractsWithOptimizer;
     use InteractsWithMimeTypes;
     use InteractWithTemporaryDirectory;
+    use HasSerializedCallback;
 
-    protected Filesystem $srcDisk;
     protected string $from;
-    protected ?string $to = null;
-    protected ?Filesystem $targetDisk = null;
-    protected bool $keepOriginal = false;
-    protected ?string $tempDirLocation = null;
-    protected string $driver = 'imagick';
-
+    protected ?int $quality;
     protected ?Image $image;
-    protected TemporaryDirectory $tempDir;
     protected string $tempPath;
+    protected int $originalSize;
+    protected int $optimizedSize;
+    protected ?string $to = null;
     protected ?string $extension;
+    protected string $visibility;
+    protected Filesystem $srcDisk;
+    protected string $driver = 'imagick';
+    protected TemporaryDirectory $tempDir;
+    protected ?Filesystem $targetDisk = null;
+    protected ?string $tempDirLocation = null;
+
+    /**
+     * Callback called when finished
+     */
+    protected mixed $onFinishCallback = null;
+
+    /**
+     * Queue self
+     */
+    public static function queue(string $srcDisk, string $from, string $to = null, string $targetDisk = null, $quality = null, mixed $onFinishCallback = null)
+    {
+        dispatch(function () use ($srcDisk, $from, $to, $targetDisk, $quality, $onFinishCallback) {
+            ImageOptimizeAction::make($srcDisk, $from, $to, $targetDisk, $quality, $onFinishCallback)->optimize();
+        });
+    }
 
     /**
      * Instantiate the class
      */
-    public static function make(Filesystem $srcDisk, string $from, string $to = null, ?Filesystem $targetDisk = null, $keepOriginal = false): static
+    public static function make(string $srcDisk, string $from, string $to = null, string $targetDisk = null, $quality = null, mixed $onFinishCallback = null): static
     {
         $self = new static();
-        $self->srcDisk = $srcDisk;
+        $self->srcDisk = Storage::disk($srcDisk);
+        $self->targetDisk = $targetDisk ? Storage::disk($targetDisk) : Storage::disk($srcDisk);
         $self->from = $from;
         $self->to = $to ?: $from;
-        $self->targetDisk = $targetDisk ?: $srcDisk;
-        $self->keepOriginal = $keepOriginal;
+        $self->quality = ($quality > 0 && $quality < 100) ? $quality : null;
+        $self->onFinishCallback = $self->serializeCallback($onFinishCallback);
         return $self;
     }
 
-
+    /**
+     * Optimize
+     */
     public function optimize(): bool
     {
         $this->makeInterventionImage();
@@ -63,15 +86,24 @@ class ImageOptimizeAction
 
         $this->optimizeInTempDir();
 
-        $this->uploadToDisk();
+        $this->uploadIfOptimized();
 
         $this->cleanTempDir();
+
+        $this->triggerOnFinishCallback();
 
         return true;
     }
 
+    /**
+     * Make Intervention Image Instance
+     */
     protected function makeInterventionImage()
     {
+        $this->originalSize = $this->srcDisk->size($this->from);
+
+        $this->visibility = $this->srcDisk->getVisibility($this->from);
+
         $this->image = (new ImageManager(['driver' => $this->driver]))
             ->make(
                 $this->srcDisk->get($this->from)
@@ -80,16 +112,27 @@ class ImageOptimizeAction
         $this->extension = static::guessExtensionFromMimeType($this->image->mime());
     }
 
+    /**
+     * Upload Disk
+     */
     protected function uploadToDisk()
     {
-        $this->targetDisk->put($this->to, File::get($this->tempPath));
+        ($this->targetDisk ?: $this->srcDisk)->put($this->to, File::get($this->tempPath), [
+            'visibility' => $this->visibility == 'public' ? 'public' : 'private'
+        ]);
     }
 
+    /**
+     * Get fresh optimizer
+     */
     protected function getFreshOptimizer(): OptimizerChain
     {
         return OptimizerChainFactory::create($this->config());
     }
 
+    /**
+     * Create Temporary Directory
+     */
     protected function createTempDir()
     {
         $this->tempDir = $this->temporaryDirectory();
@@ -97,18 +140,68 @@ class ImageOptimizeAction
         $this->tempPath = $this->tempDir->path(Str::uuid() . '.' . $this->extension);
     }
 
+    /**
+     * Optimize in temporary directory
+     */
     protected function optimizeInTempDir()
     {
         $this->image->save($this->tempPath);
 
         $this->getFreshOptimizer()->optimize($this->tempPath);
+
+        $this->optimizedSize = filesize($this->tempPath);
     }
 
+    /**
+     * Check if optimized
+     */
+    protected function optimized(): bool
+    {
+        return $this->optimizedSize < $this->originalSize;
+    }
+
+    /**
+     * Upload if optimized
+     */
+    protected function uploadIfOptimized()
+    {
+        if (!$this->optimized()) return;
+
+        $this->uploadToDisk();
+    }
+
+    /**
+     * Clean temporary directory
+     */
     protected function cleanTempDir()
     {
         $this->tempDir->delete();
     }
 
+    /**
+     * Trigger onFinishCallback
+     */
+    protected function triggerOnFinishCallback()
+    {
+        $data = [
+            'originalSize'    => $this->originalSize,
+            'optimizedSize'   => $this->optimizedSize,
+            'diskSpaceSaving' => $this->originalSize > $this->optimizedSize ? $this->originalSize - $this->optimizedSize : 0,
+            'optimized'       => $this->optimized(),
+            'from'            => $this->from,
+            'to'              => $this->to,
+            'srcDisk'         => $this->srcDisk->getConfig()['driver'],
+            'targetDisk'      => $this->targetDisk->getConfig()['driver'],
+        ];
+
+
+        $this->triggerCallback($this->onFinishCallback, $data);
+    }
+
+
+    /**
+     * Optimizer config
+     */
     protected function config(): array
     {
         return [
@@ -119,7 +212,7 @@ class ImageOptimizeAction
             'optimizers'             => [
 
                 Jpegoptim::class => [
-                    '-m85', // set maximum quality to 85%
+                    '-m' . ($this->quality ?: '75'), // set maximum quality to 85%
                     '--strip-all',  // this strips out all text information such as comments and EXIF data
                     '--all-progressive',  // this will make sure the resulting image is a progressive one
                 ],

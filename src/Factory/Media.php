@@ -3,6 +3,7 @@
 namespace Apsonex\Media\Factory;
 
 use Apsonex\Media\Actions\ImageOptimizeAction;
+use Apsonex\Media\Actions\MakeImageVariationsAction;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Intervention\Image\Image;
@@ -16,9 +17,15 @@ class Media
     }
 
 
-    public function imageOptimizer(Filesystem $srcDisk, string $srcPath, string $srcTarget = null, ?Filesystem $targetDisk = null, $keepOriginal = false): ImageOptimizeAction
+    public function imageOptimizer(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null): ImageOptimizeAction
     {
-        return ImageOptimizeAction::make($srcDisk, $srcPath, $srcTarget, $targetDisk, $keepOriginal);
+        return ImageOptimizeAction::make($srcDisk, $srcPath, $srcTarget, $targetDisk, $callback);
+    }
+
+
+    public function makeImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
+    {
+        return MakeImageVariationsAction::execute($path, $variations, $srcDisk, $targetDisk, $callback);
     }
 
 }

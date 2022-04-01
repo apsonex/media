@@ -9,15 +9,11 @@ use Illuminate\Support\Facades\Storage;
 class MediaImageFactoryTest extends TestCase
 {
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->emptyTempDirectory();
-    }
-
     /** @test */
     public function it_store_image_to_disk()
     {
+        $this->cleanTempDir();
+
         $uploadedFile = $this->testImage('food-hd-long.jpg');
 
         $data = Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->visibilityPublic()->process();
@@ -27,11 +23,15 @@ class MediaImageFactoryTest extends TestCase
         $image = File::allFiles(static::$tempDir . '/some/path')[0];
 
         $this->assertEquals('name.jpg', $image->getFilename());
+
+        $this->cleanTempDir();
     }
 
     /** @test */
     public function image_can_be_store_without_path_and_disk()
     {
+        $this->cleanTempDir();
+
         $this->assertCount(0, File::allFiles(static::$tempDir));
 
         $uploadedFile = $this->testImage('food-hd-long.jpg');
@@ -39,68 +39,35 @@ class MediaImageFactoryTest extends TestCase
         Media::imageFactory($uploadedFile)->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir));
-    }
 
-//    /** @test */
-//    public function image_can_be_optimized()
-//    {
-//        $this->assertCount(0, File::allFiles(static::$tempDir));
-//
-//        $uploadedFile = $this->testImage('food-hd-long.jpg');
-//
-//        Media::imageFactory($uploadedFile)
-//            ->temporaryDirLocation(static::$tempDir . '/temp-dir')
-//            ->optimize()
-//            ->process();
-//
-//        $this->assertCount(1, File::allFiles(static::$tempDir));
-//    }
+        $this->cleanTempDir();
+    }
 
     /** @test */
     public function it_can_upload_rets_object_images()
     {
-        $this->assertCount(0, File::allFiles(static::$tempDir));
+        $this->cleanTempDir();
 
         $results = mls_data()->testImagesResponse(1);
 
-        Media::imageFactory($results->first()->getContent())
-            ->temporaryDirLocation(static::$tempDir . '/temp-dir')
-            ->optimize()
-            ->process();
+        Media::imageFactory($results->first()->getContent())->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir));
+
+        $this->cleanTempDir();
     }
 
     /** @test */
-    public function it_can_optimize_images()
+    public function it_can_trigger_image_optimization()
     {
-        $this->assertCount(0, File::allFiles(static::$tempDir));
+        $this->cleanTempDir();
 
-        $results = $this->testImage('test.jpg');
+        $results = mls_data()->testImagesResponse(1);
 
-        $results->storePubliclyAs('path', 'test.jpg');
+        Media::imageFactory($results->first()->getContent())->optimize(true)->process();
 
-        $size1 = Storage::disk()->size('path/test.jpg');
+        $this->assertCount(1, File::allFiles(static::$tempDir));
 
-        Media::imageOptimizer(Storage::disk(), 'path/test.jpg')
-            ->temporaryDirLocation(static::$tempDir . '/temp-dir')
-            ->optimize();
-
-        $size2 = Storage::disk()->size('path/test.jpg');
-
-        $this->assertTrue($size2 < $size1);
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        parent::tearDownAfterClass();
-
-        foreach (File::directories(self::$tempDir) as $dir) {
-            File::deleteDirectory($dir);
-        }
-
-        foreach (File::allFiles(self::$tempDir) as $allFile) {
-            File::delete($allFile);
-        }
+        $this->cleanTempDir();
     }
 }

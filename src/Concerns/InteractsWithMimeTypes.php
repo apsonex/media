@@ -10,14 +10,14 @@ use Symfony\Component\Mime\MimeTypesInterface;
 trait InteractsWithMimeTypes
 {
 
-    protected ?MimeTypesInterface $mime = null;
+    protected ?MimeTypesInterface $mimeFinder = null;
 
     /**
      * Get the mime types instance.
      */
     public function getMimeTypes(): MimeTypesInterface
     {
-        return $this->mime ??= new MimeTypes;
+        return $this->mimeFinder ??= new MimeTypes;
     }
 
     /**

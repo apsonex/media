@@ -11,8 +11,10 @@ use Intervention\Image\Image;
 
 /**
  * @method static ImageFactory imageFactory(Image|UploadedFile|string $src, string $targetPath = null, string $disk = null)
- * @method static ImageOptimizeAction optimizeImage(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null)
+ * @method static bool imageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null)
+ * @method static void queueImageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null)
  * @method static array makeImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
+ * @method static void queueImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
  * @method static bool deleteImageVariations(string $disk, array $variations, mixed $callback = null)
  */
 class Media extends Facade

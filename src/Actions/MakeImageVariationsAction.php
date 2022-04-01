@@ -56,6 +56,13 @@ class MakeImageVariationsAction
         $this->callback = $callback;
     }
 
+    public static function queue(string $path, array $variations, string $srcDisk, ?string $targetDisk, mixed $callback)
+    {
+        dispatch(function () use ($path,  $variations,  $srcDisk, $targetDisk,  $callback) {
+            MakeImageVariationsAction::execute($path,  $variations,  $srcDisk, $targetDisk,  $callback);
+        });
+    }
+
     /**
      * Execute
      */

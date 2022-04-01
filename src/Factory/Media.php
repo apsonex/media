@@ -17,9 +17,14 @@ class Media
         return ImageFactory::make($src)->path($targetPath)->storageDisk($disk);
     }
 
-    public function optimizeImage(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null): bool
+    public function imageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null): bool
     {
         return ImageOptimizeAction::make($srcDisk, $srcPath, $srcTarget, $targetDisk, $callback)->optimize();
+    }
+
+    public function queueImageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null)
+    {
+        ImageOptimizeAction::queue($srcDisk, $srcPath, $srcTarget, $targetDisk, $callback);
     }
 
     public function makeImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null): array
@@ -27,7 +32,12 @@ class Media
         return MakeImageVariationsAction::execute($path, $variations, $srcDisk, $targetDisk, $callback);
     }
 
-    public function deleteImageVariations(string $diskDriver, array $variations, mixed $callback = null):bool
+    public function queueImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
+    {
+        MakeImageVariationsAction::queue($path, $variations, $srcDisk, $targetDisk, $callback);
+    }
+
+    public function deleteImageVariations(string $diskDriver, array $variations, mixed $callback = null): bool
     {
         return DeleteImageVariationsAction::execute($diskDriver, $variations, $callback);
     }

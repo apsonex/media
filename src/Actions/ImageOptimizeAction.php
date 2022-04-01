@@ -22,6 +22,9 @@ use Apsonex\Media\Concerns\InteractsWithOptimizer;
 use Spatie\LaravelImageOptimizer\OptimizerChainFactory;
 use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
 
+/**
+ * https://github.com/psliwa/image-optimizer
+ */
 class ImageOptimizeAction
 {
 

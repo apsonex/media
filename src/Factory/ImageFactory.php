@@ -146,9 +146,9 @@ class ImageFactory
     /**
      * Set Storage Disk
      */
-    public function storageDisk(Filesystem $disk = null): static
+    public function storageDisk(string $disk = null): static
     {
-        $this->disk = $disk ?: $this->disk;
+        $this->disk = $disk ? Storage::disk($disk) : Storage::disk();
         return $this;
     }
 

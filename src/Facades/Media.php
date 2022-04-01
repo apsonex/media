@@ -2,18 +2,18 @@
 
 namespace Apsonex\Media\Facades;
 
-use Apsonex\Media\Actions\MakeImageVariationsAction;
+use Apsonex\Media\Actions\ImageOptimizeAction;
 use Apsonex\Media\Factory\ImageFactory;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Facade;
 use Intervention\Image\Image;
 
 
 /**
- * @method static ImageFactory imageFactory(Image|UploadedFile|string $src, string $targetPath = null, ?Filesystem $disk = null)
- * @method static MakeImageVariationsAction imageOptimizer(Filesystem $srcDisk, string $srcPath, string $srcTarget = null, ?Filesystem $targetDisk = null, $keepOriginal = false)
- * method static bool deleteVariations(DocumentModel $document, $deleteEmptyDir = false)d
+ * @method static ImageFactory imageFactory(Image|UploadedFile|string $src, string $targetPath = null, string $disk = null)
+ * @method static ImageOptimizeAction optimizeImage(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null)
+ * @method static array makeImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
+ * @method static bool deleteVariations(string $disk, array $variations, mixed $callback = null)
  */
 class Media extends Facade
 {

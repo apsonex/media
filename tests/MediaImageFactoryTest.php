@@ -20,7 +20,7 @@ class MediaImageFactoryTest extends TestCase
     {
         $uploadedFile = $this->testImage('food-hd-long.jpg');
 
-        $data = Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
+        $data = Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->visibilityPublic()->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir . '/some/path'));
 

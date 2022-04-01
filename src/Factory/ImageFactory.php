@@ -33,7 +33,7 @@ class ImageFactory
         'disk'       => null,
         'size'       => null,
         'mime'       => null,
-        'visibility' => null,
+        'visibility' => 'private',
         'directory'  => null,
         'filename'   => null,
         'basename'   => null,
@@ -102,6 +102,15 @@ class ImageFactory
     public function path(?string $path = null): static
     {
         $this->options['path'] = $path;
+        return $this;
+    }
+
+    /**
+     * Mark visibility public
+     */
+    public function visibilityPublic(): static
+    {
+        $this->options['visibility'] = 'public';
         return $this;
     }
 
@@ -184,7 +193,9 @@ class ImageFactory
      */
     protected function saveToDisk(): array
     {
-        $this->disk->put($this->options['path'], $this->image);
+        $this->disk->put($this->options['path'], $this->image, [
+            'visibility' => $this->options['visibility'] === 'public' ? 'public' : 'private'
+        ]);
         $this->options['size'] = (int)$this->disk->size($this->options['path']);
 
         return [

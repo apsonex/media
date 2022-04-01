@@ -9,10 +9,11 @@ namespace Apsonex\Media\Factory;
 enum ImageSize: string
 {
 
+    /**
+     * General
+     */
     const hd = '1920x1080';
-
     const thumbnail = '100x100';
-
     const thumbnailLarge = '600x600';
 
     /**
@@ -53,8 +54,7 @@ enum ImageSize: string
     /**
      * Facebook
      */
-    const facebookCover = '1200x675|1.91:1';
-    const facebookPost = '1200x628|1.91:1';
+    const facebookPost = '1200x630|1.91:1';
 
     /**
      * Instagram

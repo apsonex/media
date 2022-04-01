@@ -1,6 +1,6 @@
 <?php
 
-namespace Apsonex\Media\Factory\Concerns;
+namespace Apsonex\Media\Concerns;
 
 use Spatie\TemporaryDirectory\TemporaryDirectory;
 

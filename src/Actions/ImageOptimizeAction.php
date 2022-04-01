@@ -1,12 +1,14 @@
 <?php
 
-namespace Apsonex\Media\Factory;
+namespace Apsonex\Media\Actions;
 
-use Apsonex\Media\Factory\Concerns\InteractsWithOptimizer;
+use Apsonex\Media\Concerns\InteractsWithMimeTypes;
+use Apsonex\Media\Concerns\InteractsWithOptimizer;
+use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
 use Illuminate\Contracts\Filesystem\Filesystem;
-use Apsonex\Media\Factory\Concerns\InteractWithTemporaryDirectory;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
 use Spatie\ImageOptimizer\OptimizerChain;
 use Spatie\ImageOptimizer\Optimizers\Cwebp;
@@ -15,12 +17,14 @@ use Spatie\ImageOptimizer\Optimizers\Jpegoptim;
 use Spatie\ImageOptimizer\Optimizers\Optipng;
 use Spatie\ImageOptimizer\Optimizers\Pngquant;
 use Spatie\ImageOptimizer\Optimizers\Svgo;
-use Symfony\Component\Mime\MimeTypes;
+use Spatie\LaravelImageOptimizer\OptimizerChainFactory;
+use Spatie\TemporaryDirectory\TemporaryDirectory;
 
-class ImageOptimizer
+class ImageOptimizeAction
 {
 
     use InteractsWithOptimizer;
+    use InteractsWithMimeTypes;
     use InteractWithTemporaryDirectory;
 
     protected Filesystem $srcDisk;
@@ -30,6 +34,11 @@ class ImageOptimizer
     protected bool $keepOriginal = false;
     protected ?string $tempDirLocation = null;
     protected string $driver = 'imagick';
+
+    protected ?Image $image;
+    protected TemporaryDirectory $tempDir;
+    protected string $tempPath;
+    protected ?string $extension;
 
     /**
      * Instantiate the class
@@ -48,44 +57,56 @@ class ImageOptimizer
 
     public function optimize(): bool
     {
-        $image = $this->makeImage($this->srcDisk->get($this->from));
+        $this->makeInterventionImage();
 
-        $tempDir = $this->temporaryDirectory();
+        $this->createTempDir();
 
-        $tempPath = $tempDir->path(Str::uuid() . '.' . $this->extension($image));
+        $this->optimizeInTempDir();
 
-        $image->save($tempPath);
+        $this->uploadToDisk();
 
-        $this->getFreshOptimizer()->optimize($tempPath);
-
-        $this->uploadToDisk($this->to, File::get($tempPath));
-
-        $tempDir->delete();
+        $this->cleanTempDir();
 
         return true;
     }
 
-    protected function makeImage($image): \Intervention\Image\Image
+    protected function makeInterventionImage()
     {
-        return (new ImageManager(['driver' => $this->driver]))->make($image);
+        $this->image = (new ImageManager(['driver' => $this->driver]))
+            ->make(
+                $this->srcDisk->get($this->from)
+            );
+
+        $this->extension = static::guessExtensionFromMimeType($this->image->mime());
     }
 
-    protected function uploadToDisk($to, $img)
+    protected function uploadToDisk()
     {
-        $this->targetDisk->put($to, $img);
-    }
-
-    /**
-     * Get extension
-     */
-    protected function extension($image): string
-    {
-        return app(MimeTypes::class)->getExtensions($image->mime())[0] ?? 'jpg';
+        $this->targetDisk->put($this->to, File::get($this->tempPath));
     }
 
     protected function getFreshOptimizer(): OptimizerChain
     {
-        return \Spatie\LaravelImageOptimizer\OptimizerChainFactory::create($this->config());
+        return OptimizerChainFactory::create($this->config());
+    }
+
+    protected function createTempDir()
+    {
+        $this->tempDir = $this->temporaryDirectory();
+
+        $this->tempPath = $this->tempDir->path(Str::uuid() . '.' . $this->extension);
+    }
+
+    protected function optimizeInTempDir()
+    {
+        $this->image->save($this->tempPath);
+
+        $this->getFreshOptimizer()->optimize($this->tempPath);
+    }
+
+    protected function cleanTempDir()
+    {
+        $this->tempDir->delete();
     }
 
     protected function config(): array
@@ -148,5 +169,4 @@ class ImageOptimizer
             'log_optimizer_activity' => false,
         ];
     }
-
 }

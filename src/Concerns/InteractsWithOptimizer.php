@@ -1,8 +1,9 @@
 <?php
 
-namespace Apsonex\Media\Factory\Concerns;
+namespace Apsonex\Media\Concerns;
 
 use Spatie\ImageOptimizer\OptimizerChain;
+use function app;
 
 trait InteractsWithOptimizer
 {

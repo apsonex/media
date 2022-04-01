@@ -3,7 +3,6 @@
 namespace Apsonex\Media\Tests;
 
 use Apsonex\Media\Facades\Media;
-use Apsonex\Media\Factory\ImageSize;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
@@ -21,7 +20,7 @@ class MediaImageFactoryTest extends TestCase
     {
         $uploadedFile = $this->testImage('food-hd-long.jpg');
 
-        Media::putImage($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
+        $data = Media::putImage($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir . '/some/path'));
 
@@ -42,20 +41,20 @@ class MediaImageFactoryTest extends TestCase
         $this->assertCount(1, File::allFiles(static::$tempDir));
     }
 
-    /** @test */
-    public function image_can_be_optimized()
-    {
-        $this->assertCount(0, File::allFiles(static::$tempDir));
-
-        $uploadedFile = $this->testImage('food-hd-long.jpg');
-
-        Media::putImage($uploadedFile)
-            ->temporaryDirLocation(static::$tempDir . '/temp-dir')
-            ->optimize()
-            ->process();
-
-        $this->assertCount(1, File::allFiles(static::$tempDir));
-    }
+//    /** @test */
+//    public function image_can_be_optimized()
+//    {
+//        $this->assertCount(0, File::allFiles(static::$tempDir));
+//
+//        $uploadedFile = $this->testImage('food-hd-long.jpg');
+//
+//        Media::putImage($uploadedFile)
+//            ->temporaryDirLocation(static::$tempDir . '/temp-dir')
+//            ->optimize()
+//            ->process();
+//
+//        $this->assertCount(1, File::allFiles(static::$tempDir));
+//    }
 
     /** @test */
     public function it_can_upload_rets_object_images()

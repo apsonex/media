@@ -2,10 +2,10 @@
 
 namespace Apsonex\Media\Factory;
 
-use Apsonex\Media\Factory\Results\ImageResult;
-use Intervention\Image\Image;
-use Illuminate\Http\UploadedFile;
+use Apsonex\Media\Actions\ImageOptimizeAction;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Http\UploadedFile;
+use Intervention\Image\Image;
 
 class Media
 {
@@ -16,9 +16,9 @@ class Media
     }
 
 
-    public function imageOptimizer(Filesystem $srcDisk, string $srcPath, string $srcTarget = null, ?Filesystem $targetDisk = null, $keepOriginal = false): ImageOptimizer
+    public function imageOptimizer(Filesystem $srcDisk, string $srcPath, string $srcTarget = null, ?Filesystem $targetDisk = null, $keepOriginal = false): ImageOptimizeAction
     {
-        return ImageOptimizer::make($srcDisk, $srcPath, $srcTarget, $targetDisk, $keepOriginal);
+        return ImageOptimizeAction::make($srcDisk, $srcPath, $srcTarget, $targetDisk, $keepOriginal);
     }
 
 }

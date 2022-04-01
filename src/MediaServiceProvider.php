@@ -27,5 +27,4 @@ class MediaServiceProvider extends ServiceProvider
         });
     }
 
-
 }

@@ -10,7 +10,7 @@ use Intervention\Image\Image;
 class Media
 {
 
-    public function putImage(Image|UploadedFile|string $src, ?string $targetPath = null, ?Filesystem $disk = null): ImageFactory
+    public function imageFactory(Image|UploadedFile|string $src, ?string $targetPath = null, ?Filesystem $disk = null): ImageFactory
     {
         return ImageFactory::make($src)->path($targetPath)->storageDisk($disk);
     }

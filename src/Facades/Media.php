@@ -11,7 +11,7 @@ use Intervention\Image\Image;
 
 
 /**
- * @method static ImageFactory putImage(Image|UploadedFile|string $src, string $targetPath = null, ?Filesystem $disk = null)
+ * @method static ImageFactory imageFactory(Image|UploadedFile|string $src, string $targetPath = null, ?Filesystem $disk = null)
  * @method static ImageOptimizeAction imageOptimizer(Filesystem $srcDisk, string $srcPath, string $srcTarget = null, ?Filesystem $targetDisk = null, $keepOriginal = false)
  * method static bool deleteVariations(DocumentModel $document, $deleteEmptyDir = false)d
  */

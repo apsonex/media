@@ -24,6 +24,8 @@ class ImageFactory
 
     protected bool $triggerOptimization = false;
 
+    protected int $exportQuality = 75;
+
     /**
      * Factory options
      */
@@ -133,6 +135,11 @@ class ImageFactory
         return $this;
     }
 
+    public function exportQuality(int $quality = 75): static
+    {
+        $this->exportQuality = ($quality > 0 && $quality < 100) ? $quality : 75;
+        return $this;
+    }
 
     /**
      * Merge options
@@ -159,7 +166,7 @@ class ImageFactory
     {
         $this->configure();
 
-        $this->image->encode($this->extension());
+        $this->image->encode($this->extension(), $this->exportQuality);
 
         $this->options['variations']['original'] = $this->saveToDisk();
 

@@ -20,7 +20,7 @@ class MediaImageFactoryTest extends TestCase
     {
         $uploadedFile = $this->testImage('food-hd-long.jpg');
 
-        $data = Media::putImage($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
+        $data = Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir . '/some/path'));
 
@@ -36,7 +36,7 @@ class MediaImageFactoryTest extends TestCase
 
         $uploadedFile = $this->testImage('food-hd-long.jpg');
 
-        Media::putImage($uploadedFile)->process();
+        Media::imageFactory($uploadedFile)->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir));
     }
@@ -48,7 +48,7 @@ class MediaImageFactoryTest extends TestCase
 //
 //        $uploadedFile = $this->testImage('food-hd-long.jpg');
 //
-//        Media::putImage($uploadedFile)
+//        Media::imageFactory($uploadedFile)
 //            ->temporaryDirLocation(static::$tempDir . '/temp-dir')
 //            ->optimize()
 //            ->process();
@@ -63,7 +63,7 @@ class MediaImageFactoryTest extends TestCase
 
         $results = mls_data()->testImagesResponse(1);
 
-        Media::putImage($results->first()->getContent())
+        Media::imageFactory($results->first()->getContent())
             ->temporaryDirLocation(static::$tempDir . '/temp-dir')
             ->optimize()
             ->process();

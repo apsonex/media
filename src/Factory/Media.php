@@ -27,7 +27,7 @@ class Media
         ImageOptimizeAction::queue($srcDisk, $srcPath, $srcTarget, $targetDisk, $callback);
     }
 
-    public function makeImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null): array
+    public function imageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null): array
     {
         return MakeImageVariationsAction::execute($path, $variations, $srcDisk, $targetDisk, $callback);
     }

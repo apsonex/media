@@ -42,4 +42,9 @@ class Media
         return DeleteImageVariationsAction::execute($diskDriver, $variations, $callback);
     }
 
+    public function queueDeleteImageVariations(string $diskDriver, array $variations, mixed $callback = null)
+    {
+        DeleteImageVariationsAction::queue($diskDriver, $variations, $callback);
+    }
+
 }

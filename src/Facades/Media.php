@@ -16,6 +16,7 @@ use Intervention\Image\Image;
  * @method static array imageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
  * @method static void queueImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
  * @method static bool deleteImageVariations(string $disk, array $variations, mixed $callback = null)
+ * @method static bool queueDeleteImageVariations(string $disk, array $variations, mixed $callback = null)
  */
 class Media extends Facade
 {

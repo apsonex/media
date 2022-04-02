@@ -34,7 +34,9 @@ class MakeImageVariationsAction
     protected string $path;
     protected array $variations = [];
     protected Filesystem $srcDisk;
+    protected string $srcDiskName;
     protected Filesystem $targetDisk;
+    protected string $targetDiskName;
     protected mixed $callback = null;
     protected string $visibility;
     protected string $driver = 'imagick';
@@ -51,15 +53,15 @@ class MakeImageVariationsAction
     {
         $this->path = $path;
         $this->variations = $variations;
-        $this->srcDisk = Storage::disk($srcDisk);
-        $this->targetDisk = $targetDisk ? Storage::disk($targetDisk) : Storage::disk($srcDisk);
+        $this->srcDisk = Storage::disk($this->srcDiskName = $srcDisk);
+        $this->targetDisk = $targetDisk ? Storage::disk($this->targetDiskName = $targetDisk) : Storage::disk($this->targetDiskName = $srcDisk);
         $this->callback = $callback;
     }
 
     public static function queue(string $path, array $variations, string $srcDisk, ?string $targetDisk, mixed $callback)
     {
-        dispatch(function () use ($path,  $variations,  $srcDisk, $targetDisk,  $callback) {
-            MakeImageVariationsAction::execute($path,  $variations,  $srcDisk, $targetDisk,  $callback);
+        dispatch(function () use ($path, $variations, $srcDisk, $targetDisk, $callback) {
+            MakeImageVariationsAction::execute($path, $variations, $srcDisk, $targetDisk, $callback);
         });
     }
 
@@ -126,7 +128,7 @@ class MakeImageVariationsAction
             'size'       => $this->targetDisk->size($newPath),
         ];
 
-        ImageOptimizeAction::queue($this->srcDisk->getConfig()['driver'], $newPath);
+        ImageOptimizeAction::queue($this->targetDiskName, $newPath);
 
         $this->image->reset();
     }

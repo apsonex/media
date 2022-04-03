@@ -4,6 +4,7 @@ namespace Apsonex\Media\Actions;
 
 
 use Closure;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Concerns\HasSerializedCallback;
@@ -25,7 +26,7 @@ class DeleteImageVariationsAction
      */
     public function __construct(
         protected string $diskDriver,
-        protected array  $data,
+        protected array  $varitations,
     )
     {
         $this->configureDisk();
@@ -44,7 +45,7 @@ class DeleteImageVariationsAction
     /**
      * Execute
      */
-    public static function execute($diskDriver, $variations, mixed $callback = null): bool
+    public static function execute($diskDriver, array $variations, mixed $callback = null): bool
     {
         try {
             $self = new static($diskDriver, $variations);
@@ -52,7 +53,7 @@ class DeleteImageVariationsAction
             $self->process();
             return true;
         } catch (\Exception $e) {
-            return $e->getMessage();
+            Log::alert($e->getMessage());
         }
     }
 
@@ -63,9 +64,9 @@ class DeleteImageVariationsAction
     {
         $paths = [];
 
-        foreach ($this->data['variations'] as $name => $variation) {
-            $paths[] = $variation['path'];
-            $this->disk->delete($variation['path']);
+        foreach ($this->varitations as $path) {
+            $paths[] = $path;
+            $this->disk->delete($path);
         }
 
         $this->deleteDirectoriesIfEmpty($paths);

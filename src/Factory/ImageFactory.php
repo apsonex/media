@@ -3,13 +3,13 @@
 namespace Apsonex\Media\Factory;
 
 
-use Apsonex\Media\Actions\ImageOptimizeAction;
 use Exception;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
+use Illuminate\Support\Collection;
 use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Storage;
+use Apsonex\Media\Actions\ImageOptimizeAction;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Concerns\InteractsWithOptimizer;
 use Apsonex\Media\Concerns\InteractsWithMimeTypes;
@@ -33,6 +33,7 @@ class ImageFactory
         'quality'         => 85,
         'onFinishTrigger' => null,
     ];
+
 
     /**
      * Factory options
@@ -77,6 +78,8 @@ class ImageFactory
      * Storage Disk
      */
     public Filesystem $disk;
+
+    public string $diskName;
 
     protected ?string $encodingFormat = null;
 
@@ -148,6 +151,7 @@ class ImageFactory
      */
     public function storageDisk(string $disk = null): static
     {
+        $this->diskName = $disk;
         $this->disk = $disk ? Storage::disk($disk) : Storage::disk();
         return $this;
     }
@@ -192,7 +196,7 @@ class ImageFactory
             'variations' => $this->options['variations']
         ]);
 
-        $this->optimizeIfRequested($data);
+        $data = $this->optimizeIfRequested($data);
 
         return $data;
     }
@@ -249,6 +253,7 @@ class ImageFactory
             'filename'  => $pathinfo['filename'], // name
             'extension' => $pathinfo['extension'],
         ]);
+
     }
 
     /**
@@ -312,7 +317,7 @@ class ImageFactory
     protected function baseAttributes(): array
     {
         return [
-            'disk'       => $this->disk->getConfig()['driver'],
+            'disk'       => $this->diskName,
             'directory'  => $this->options['directory'],
             'visibility' => $this->options['visibility'],
             'type'       => $this->options['type'],
@@ -329,10 +334,10 @@ class ImageFactory
      */
     protected function optimizeIfRequested($data)
     {
-        if (!$this->triggerOptimization) return;
+        if (!$this->triggerOptimization) return $data;
 
-        $data = [
-            'srcDisk'          => $this->disk->getConfig()['driver'],
+        $options = [
+            'srcDisk'          => $this->diskName,
             'from'             => null,
             'to'               => null,
             'targetDisk'       => null,
@@ -340,18 +345,32 @@ class ImageFactory
             'onFinishCallback' => $this->optimizationOptions['onFinishTrigger'] ?? null
         ];
 
+        $totalNewSize = 0;
+        $newData = $data;
+
         collect($data['variations'])
-            ->when($this->triggerOptimization === 'queue', function (Collection $variations) use ($data) {
-                $variations->each(function ($variation) use ($data) {
-                    $data = array_merge($data, ['from' => $variation['path']]);
+            ->when($this->triggerOptimization === 'queue', function (Collection $variations) use ($options) {
+                $variations->each(function ($variation) use ($options) {
+                    $options = array_merge($options, ['from' => $variation['path']]);
                     ImageOptimizeAction::queue(...$data);
                 });
             })
-            ->when($this->triggerOptimization !== 'queue', function (Collection $variations) use ($data) {
-                $variations->each(function ($variation) use ($data) {
-                    $data = array_merge($data, ['from' => $variation['path']]);
-                    ImageOptimizeAction::make(...$data)->optimize();
+            ->when($this->triggerOptimization !== 'queue', function (Collection $variations) use ($options, &$newData, &$totalNewSize) {
+                $variations->each(function ($variation, $name) use ($options, &$newData, &$totalNewSize) {
+                    $options = array_merge($options, ['from' => $variation['path']]);
+                    $result = ImageOptimizeAction::make(...$options)->optimize();
+                    $newSize = Storage::disk($options['srcDisk'])->size($options['from']);
+                    $newData['optimize'] = true;
+                    $newData['size'] = $totalNewSize + $newSize;
+                    $totalNewSize = $totalNewSize + $newSize;
+                    $newData['variations'][$name] = [
+                        ...$newData['variations'][$name],
+                        'size'     => $newSize,
+                        'optimize' => true,
+                    ];
                 });
             });
+
+        return $newData;
     }
 }

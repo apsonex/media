@@ -2,12 +2,14 @@
 
 namespace Apsonex\Media\Factory;
 
-use Apsonex\Media\Actions\DeleteImageVariationsAction;
-use Apsonex\Media\Actions\ImageOptimizeAction;
-use Apsonex\Media\Actions\MakeImageVariationsAction;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Image;
+use Illuminate\Http\UploadedFile;
+use Apsonex\Media\Actions\ImageOptimizeAction;
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Apsonex\Media\Actions\MakeImageVariationsAction;
+use Apsonex\Media\Actions\DeleteImageVariationsAction;
 
 class Media
 {
@@ -45,6 +47,24 @@ class Media
     public function queueDeleteImageVariations(string $diskDriver, array $variations, mixed $callback = null)
     {
         DeleteImageVariationsAction::queue($diskDriver, $variations, $callback);
+    }
+
+    public static function deleteDirectoriesIfEmpty(string|Filesystem $disk, array|string $paths)
+    {
+        $disk = is_string($disk) ? Storage::disk($disk) : $disk;
+
+        collect(Arr::wrap($paths))
+            ->map(fn($p) => pathinfo($p)['dirname'] ?? null)
+            ->filter()
+            ->filter(fn($p) => $p !== '.')
+            ->unique()
+            ->map(function ($dir) use ($disk) {
+                $files = $disk->files($dir);
+                $dirs = $disk->directories($dir);
+                if (empty($files) && empty($dirs)) {
+                    $disk->deleteDirectory($dir);
+                }
+            });
     }
 
 }

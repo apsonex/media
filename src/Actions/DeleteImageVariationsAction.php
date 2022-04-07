@@ -4,6 +4,7 @@ namespace Apsonex\Media\Actions;
 
 
 use Closure;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
@@ -64,9 +65,12 @@ class DeleteImageVariationsAction
     {
         $paths = [];
 
-        foreach ($this->varitations as $path) {
-            $paths[] = $path;
-            $this->disk->delete($path);
+        foreach ($this->varitations as $nameOrIndex => $path) {
+            $pathToDelete = is_array($path) ? Arr::get($path, 'path', null) : $path;
+            if ($pathToDelete) {
+                $paths[] = $pathToDelete;
+                $this->disk->delete($pathToDelete);
+            }
         }
 
         $this->deleteDirectoriesIfEmpty($paths);

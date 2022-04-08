@@ -25,17 +25,32 @@ class Media
     /**
      * Optimize images
      */
-    public function imageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null): bool
+    public function imageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, int $quality = 85, mixed $callback = null): bool
     {
-        return ImageOptimizeAction::make($srcDisk, $srcPath, $srcTarget, $targetDisk, $callback)->optimize();
+        return ImageOptimizeAction::make(
+            srcDisk: $srcDisk,
+            from: $srcPath,
+            to: $srcTarget,
+            targetDisk: $targetDisk,
+            quality: $quality,
+            onFinishCallback: $callback,
+        )->optimize();
     }
 
     /**
      * Queue Image Optimizations
      */
-    public function queueImageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null, $onQueue = 'default')
+    public function queueImageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, int $quality = 85, mixed $callback = null, $onQueue = 'default')
     {
-        ImageOptimizeAction::queue($srcDisk, $srcPath, $srcTarget, $targetDisk, $callback, $onQueue);
+        ImageOptimizeAction::queue(
+            srcDisk: $srcDisk,
+            from: $srcPath,
+            to: $srcTarget,
+            targetDisk: $targetDisk,
+            quality: $quality,
+            onFinishCallback: $callback,
+            onQueue: $onQueue,
+        );
     }
 
     /**

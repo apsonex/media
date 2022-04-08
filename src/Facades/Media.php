@@ -15,8 +15,8 @@ use Illuminate\Contracts\Filesystem\Filesystem;
  * @method static ImageFactory imageFactory(Image|UploadedFile|string $src, string $targetPath = null, string $disk = null)
  * @method static array imageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null)
  * @method static void queueDeleteImageVariations(string $disk, array $variations, mixed $callback = null, string $onQueue = 'default')
- * @method static bool imageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, mixed $callback = null)
- * @method static void queueImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, int $quality = 85, $callback = null, string $onQueue = 'default')
+ * @method static bool imageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, int $quality = 85, mixed $callback = null)
+ * @method static void queueImageVariations(string $path, array $variations, string $srcDisk, string $targetDisk = null, $callback = null, string $onQueue = 'default')
  * @method static void queueImageOptimize(string $srcDisk, string $srcPath, string $srcTarget = null, string $targetDisk = null, int $quality = 85, mixed $callback = null, string $onQueue = 'default')
  */
 class Media extends Facade

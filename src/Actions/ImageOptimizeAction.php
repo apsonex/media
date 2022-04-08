@@ -56,11 +56,11 @@ class ImageOptimizeAction
     /**
      * Queue self
      */
-    public static function queue(string $srcDisk, string $from, string $to = null, string $targetDisk = null, $quality = null, mixed $onFinishCallback = null)
+    public static function queue(string $srcDisk, string $from, string $to = null, string $targetDisk = null, $quality = null, mixed $onFinishCallback = null, $onQueue = 'default')
     {
         dispatch(function () use ($srcDisk, $from, $to, $targetDisk, $quality, $onFinishCallback) {
             ImageOptimizeAction::make($srcDisk, $from, $to, $targetDisk, $quality, $onFinishCallback)->optimize();
-        });
+        })->onQueue($onQueue);
     }
 
     /**

@@ -2,26 +2,12 @@
 
 namespace Apsonex\Media\Actions;
 
-use Apsonex\Media\Concerns\HasSerializedCallback;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Str;
 use Intervention\Image\Image;
-use Illuminate\Support\Facades\File;
 use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Storage;
-use Spatie\ImageOptimizer\OptimizerChain;
-use Spatie\ImageOptimizer\Optimizers\Svgo;
-use Spatie\ImageOptimizer\Optimizers\Cwebp;
-use Spatie\ImageOptimizer\Optimizers\Optipng;
-use Spatie\ImageOptimizer\Optimizers\Pngquant;
-use Spatie\ImageOptimizer\Optimizers\Gifsicle;
-use Spatie\ImageOptimizer\Optimizers\Jpegoptim;
 use Illuminate\Contracts\Filesystem\Filesystem;
-use Spatie\TemporaryDirectory\TemporaryDirectory;
+use Apsonex\Media\Concerns\HasSerializedCallback;
 use Apsonex\Media\Concerns\InteractsWithMimeTypes;
-use Apsonex\Media\Concerns\InteractsWithOptimizer;
-use Spatie\LaravelImageOptimizer\OptimizerChainFactory;
-use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
 
 class MakeImageVariationsAction
 {
@@ -49,7 +35,7 @@ class MakeImageVariationsAction
     protected array $finishedVariations = [];
 
 
-    public function __construct(string $path, array $variations, string $srcDisk, ?string $targetDisk, mixed $callback)
+    public function __construct(string $path, array $variations, string $srcDisk, ?string $targetDisk = null, mixed $callback = null)
     {
         $this->path = $path;
         $this->variations = $variations;
@@ -58,11 +44,14 @@ class MakeImageVariationsAction
         $this->callback = $callback;
     }
 
-    public static function queue(string $path, array $variations, string $srcDisk, ?string $targetDisk, mixed $callback)
+    /**
+     * Queue process
+     */
+    public static function queue(string $path, array $variations, string $srcDisk, ?string $targetDisk = null, mixed $callback = null, $onQueue = 'default')
     {
         dispatch(function () use ($path, $variations, $srcDisk, $targetDisk, $callback) {
             MakeImageVariationsAction::execute($path, $variations, $srcDisk, $targetDisk, $callback);
-        });
+        })->onQueue($onQueue);;
     }
 
     /**

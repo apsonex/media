@@ -27,7 +27,7 @@ class DeleteImageVariationsAction
      */
     public function __construct(
         protected string $diskDriver,
-        protected array  $varitations,
+        protected array  $variations,
     )
     {
         $this->configureDisk();
@@ -36,11 +36,11 @@ class DeleteImageVariationsAction
     /**
      * Dispatch to queue
      */
-    public static function queue(string $diskDriver, array $variations, mixed $callback = null)
+    public static function queue(string $diskDriver, array $variations, mixed $callback = null, $queueName = 'default')
     {
         dispatch(function () use ($diskDriver, $variations, $callback) {
             DeleteImageVariationsAction::execute($diskDriver, $variations, $callback);
-        });
+        })->onQueue($queueName);
     }
 
     /**
@@ -55,6 +55,7 @@ class DeleteImageVariationsAction
             return true;
         } catch (\Exception $e) {
             Log::alert($e->getMessage());
+            return false;
         }
     }
 
@@ -65,7 +66,7 @@ class DeleteImageVariationsAction
     {
         $paths = [];
 
-        foreach ($this->varitations as $nameOrIndex => $path) {
+        foreach ($this->variations as $nameOrIndex => $path) {
             $pathToDelete = is_array($path) ? Arr::get($path, 'path', null) : $path;
             if ($pathToDelete) {
                 $paths[] = $pathToDelete;

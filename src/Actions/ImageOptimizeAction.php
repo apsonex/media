@@ -4,6 +4,7 @@ namespace Apsonex\Media\Actions;
 
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
+use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -159,7 +160,7 @@ class ImageOptimizeAction
 
         $this->getFreshOptimizer()->optimize($this->tempPath);
 
-        $this->optimizedSize = filesize($this->tempPath);
+        $this->optimizedSize = File::size($this->tempPath);
     }
 
     /**
@@ -167,6 +168,20 @@ class ImageOptimizeAction
      */
     protected function optimized(): bool
     {
+//        Log::debug('------');
+//
+//        $data = [
+//            'OptimizedSize' => $this->optimizedSize,
+//            'OriginalSize'  => $this->originalSize,
+//            'Optimized'     => ($this->optimizedSize < $this->originalSize ? 'true' : 'false'),
+//            'ID'            => str($this->from)->afterLast('/')->toString(),
+//            'DiskConfig'    => $this->srcDisk->getConfig(),
+//        ];
+//
+//        Log::debug(json_encode($data));
+//
+//        Log::debug('------');
+
         return $this->optimizedSize < $this->originalSize;
     }
 

@@ -4879,12 +4879,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:apsonex/rets.git",
-                "reference": "8b2f4b7c2c231465bbb2165c6ad2d2d74cb49229"
+                "reference": "cdd53090a4f6b307453fcf19bba42bd2dbf6e2b0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/apsonex/rets/zipball/8b2f4b7c2c231465bbb2165c6ad2d2d74cb49229",
-                "reference": "8b2f4b7c2c231465bbb2165c6ad2d2d74cb49229",
+                "url": "https://api.github.com/repos/apsonex/rets/zipball/cdd53090a4f6b307453fcf19bba42bd2dbf6e2b0",
+                "reference": "cdd53090a4f6b307453fcf19bba42bd2dbf6e2b0",
                 "shasum": ""
             },
             "require": {
@@ -4934,7 +4934,7 @@
                 "source": "https://github.com/apsonex/rets/tree/main",
                 "issues": "https://github.com/apsonex/rets/issues"
             },
-            "time": "2022-04-06T21:39:19+00:00"
+            "time": "2022-04-08T14:02:48+00:00"
         },
         {
             "name": "doctrine/instantiator",

@@ -111,16 +111,27 @@ class ImageOptimizeAction
      */
     protected function makeInterventionImage()
     {
-        $this->originalSize = $this->srcDisk->size($this->from);
+        //$image = $this->srcDisk->get($this->from);
+        if (!$image = $this->getFile()) return;
+
+        $this->image = (new ImageManager(['driver' => $this->driver]))->make($image);
+
+        $this->originalSize = $this->image->filesize() ?: 0;
 
         $this->visibility = $this->srcDisk->getVisibility($this->from);
 
-        $this->image = (new ImageManager(['driver' => $this->driver]))
-            ->make(
-                $this->srcDisk->get($this->from)
-            );
-
         $this->extension = static::guessExtensionFromMimeType($this->image->mime());
+
+        $image = null;
+    }
+
+    protected function getFile()
+    {
+        try {
+            return $this->srcDisk->get($this->from);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**
@@ -168,19 +179,19 @@ class ImageOptimizeAction
      */
     protected function optimized(): bool
     {
-//        Log::debug('------');
-//
-//        $data = [
-//            'OptimizedSize' => $this->optimizedSize,
-//            'OriginalSize'  => $this->originalSize,
-//            'Optimized'     => ($this->optimizedSize < $this->originalSize ? 'true' : 'false'),
-//            'ID'            => str($this->from)->afterLast('/')->toString(),
-//            'DiskConfig'    => $this->srcDisk->getConfig(),
-//        ];
-//
-//        Log::debug(json_encode($data));
-//
-//        Log::debug('------');
+        //        Log::debug('------');
+        //
+        //        $data = [
+        //            'OptimizedSize' => $this->optimizedSize,
+        //            'OriginalSize'  => $this->originalSize,
+        //            'Optimized'     => ($this->optimizedSize < $this->originalSize ? 'true' : 'false'),
+        //            'ID'            => str($this->from)->afterLast('/')->toString(),
+        //            'DiskConfig'    => $this->srcDisk->getConfig(),
+        //        ];
+        //
+        //        Log::debug(json_encode($data));
+        //
+        //        Log::debug('------');
 
         return $this->optimizedSize < $this->originalSize;
     }

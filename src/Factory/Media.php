@@ -14,7 +14,10 @@ use Apsonex\Media\Actions\DeleteImageVariationsAction;
 class Media
 {
 
-    public function svgFactory(UploadedFile $src, ?string $targetPath = null, string $disk = null): SvgFactory
+    /**
+     * Make SVG Factory
+     */
+    public function svgFactory(UploadedFile|string $src, ?string $targetPath = null, string $disk = null): SvgFactory
     {
         return SvgFactory::make($src)->path($targetPath)->storageDisk($disk);
     }

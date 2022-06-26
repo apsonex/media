@@ -2,93 +2,33 @@
 
 namespace Apsonex\Media\Factory;
 
-
-use enshrined\svgSanitize\Sanitizer;
-use Exception;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
-use Intervention\Image\Image;
-use Illuminate\Support\Collection;
-use Intervention\Image\ImageManager;
-use Illuminate\Support\Facades\Storage;
 use Apsonex\Media\Actions\ImageOptimizeAction;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Apsonex\Media\Concerns\InteractsWithOptimizer;
-use Apsonex\Media\Concerns\InteractsWithMimeTypes;
-use Apsonex\Media\Actions\MakeImageVariationsAction;
-use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
+use enshrined\svgSanitize\Sanitizer;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
-class SvgFactory
+class SvgFactory extends BaseFactory implements FactoryContract
 {
-    use InteractsWithMimeTypes;
-
-
-    /**
-     * Factory options
-     */
-    public array $options = [
-        'disk'       => null,
-        'size'       => null,
-        'mime'       => null,
-        'visibility' => 'private',
-        'directory'  => null,
-        'filename'   => null,
-        'basename'   => null,
-        'extension'  => null,
-        'optimized'  => false,
-        'variations' => [
-            'original' => [
-                'path'      => null,
-                'filename'  => null,
-                'basename'  => null,
-                'extension' => null,
-                'optimized' => false,
-                'mime'      => null,
-                'size'      => null,
-                'width'     => null,
-                'height'    => null,
-            ]
-        ],
-    ];
-
-    /**
-     * Full target path of the images.
-     * If not provided we will make one.
-     */
-    public ?string $targetPath;
-
-    /**
-     * Storage Disk
-     */
-    public Filesystem $disk;
-
-    public string $diskName;
 
     protected string $svg;
-
-    protected string $ext;
-
-
-    /**
-     * Constructor
-     */
-    public function __construct()
-    {
-        $this->disk = Storage::disk();
-
-        $this->targetPath = null;
-    }
 
     /**
      * Make instance of static
      */
-    public static function make(UploadedFile|string $svg): static
+    public static function make($src, $options = []): static
     {
-        $self = (new static());
-        $self->svg = is_string($svg) ? $svg : $svg->getContent();
-        $self->ext = $svg instanceof UploadedFile ? $svg->guessClientExtension() : null;
-        $self->sanitizeSvg();
-        return $self;
+        return (new static())->mergeOptions($options)->source($src);
+    }
+
+    public function source(mixed $src): static
+    {
+        $this->svg = is_string($src) ? $src : $src->getContent();
+        //$this->ext = $src instanceof UploadedFile ? $src->guessClientExtension() : null;
+        $this->sanitizeSvg();
+        $this->ext = 'svg';
+        $this->configure();
+        return $this;
     }
 
     public function sanitizeSvg()
@@ -98,53 +38,19 @@ class SvgFactory
         $this->svg = $sanitizer->sanitize($this->svg);
     }
 
-    /**
-     * Set target path
-     */
-    public function path(?string $path = null): static
-    {
-        $this->options['path'] = $path;
-        return $this;
-    }
-
-    /**
-     * Mark visibility public
-     */
-    public function visibilityPublic(): static
-    {
-        $this->options['visibility'] = 'public';
-        return $this;
-    }
-
-    /**
-     * Set Storage Disk
-     */
-    public function storageDisk(string $disk = null): static
-    {
-        $this->diskName = $disk;
-        $this->disk = $disk ? Storage::disk($disk) : Storage::disk();
-        return $this;
-    }
-
 
     /**
      * Process request
      */
     public function process(): array
     {
-        $this->configure();
-
-        //$this->image->encode($this->extension(), $this->exportQuality);
-
         $this->options['variations']['original'] = $this->saveToDisk();
 
-        return array_merge($this->baseAttributes(), [
+        $data = array_merge($this->baseAttributes(), [
             'variations' => $this->options['variations']
         ]);
 
-        //$data = $this->optimizeIfRequested($data);
-
-        //return $data;
+        return $this->optimizeIfRequested($data);
     }
 
     /**
@@ -176,44 +82,10 @@ class SvgFactory
         $this->ensureValidPath();
 
         $this->options = array_merge($this->options, [
-            'mime'      => $this->image->mime(),
-            'extension' => $this->extension(),
+            'mime'      => 'image/svg+xml',
+            'extension' => $this->guessExtensionFromMimeType('image/svg+xml'),
             'type'      => 'image',
         ]);
-    }
-
-    protected function ensureValidPath()
-    {
-        $pathinfo = pathinfo(
-            trim($this->options['path'] ??= $this->randomName(), '/')
-        );
-
-        $dirname = $pathinfo['dirname'] === '.' ? null : $pathinfo['dirname'];
-
-        $this->options = array_merge($this->options, [
-            'path'      => implode('/', array_filter([$dirname, $pathinfo['basename']])),
-            'directory' => $dirname,
-            'basename'  => $pathinfo['basename'], // name.extension
-            'filename'  => $pathinfo['filename'], // name
-            'extension' => $pathinfo['extension'],
-        ]);
-
-    }
-
-    /**
-     * Random name
-     */
-    protected function randomName(): string
-    {
-        return md5(Str::uuid()->toString()) . '.' . $this->extension();
-    }
-
-    /**
-     * Get extension
-     */
-    protected function extension(): string
-    {
-        return $this->ext ?: 'svg';
     }
 
 
@@ -228,5 +100,47 @@ class SvgFactory
             'mime'       => $this->options['mime'],
             'optimize'   => false,
         ];
+    }
+
+    protected function optimizeIfRequested($data)
+    {
+        if (!$this->triggerOptimization) return $data;
+
+        $options = [
+            'srcDisk'          => $this->diskName,
+            'from'             => null,
+            'to'               => null,
+            'targetDisk'       => null,
+            'quality'          => $this->optimizationOptions['quality'],
+            'onFinishCallback' => $this->optimizationOptions['onFinishTrigger'] ?? null
+        ];
+
+        $totalNewSize = 0;
+        $newData = $data;
+
+        collect($data['variations'])
+            ->when($this->triggerOptimization === 'queue', function (Collection $variations) use ($options) {
+                $variations->each(function ($variation) use ($options) {
+                    $options = array_merge($options, ['from' => $variation['path']]);
+                    ImageOptimizeAction::queue(...$options);
+                });
+            })
+            ->when($this->triggerOptimization !== 'queue', function (Collection $variations) use ($options, &$newData, &$totalNewSize) {
+                $variations->each(function ($variation, $name) use ($options, &$newData, &$totalNewSize) {
+                    $options = array_merge($options, ['from' => $variation['path']]);
+                    $result = ImageOptimizeAction::make(...$options)->optimize();
+                    $newSize = Storage::disk($options['srcDisk'])->size($options['from']);
+                    $newData['optimize'] = true;
+                    $newData['size'] = $totalNewSize + $newSize;
+                    $totalNewSize = $totalNewSize + $newSize;
+                    $newData['variations'][$name] = [
+                        ...$newData['variations'][$name],
+                        'size'     => $newSize,
+                        'optimize' => true,
+                    ];
+                });
+            });
+
+        return $newData;
     }
 }

@@ -14,9 +14,9 @@ class MediaImageFactoryTest extends TestCase
     {
         $this->cleanTempDir();
 
-        $uploadedFile = $this->testImage('food-hd-long.jpg');
+        $uploadedFile = $this->testMedia('food-hd-long.jpg');
 
-        $data = Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->visibilityPublic()->process();
+        $data = Media::imageFactory($uploadedFile, 'some/path/name.jpg', 'local')->visibilityPublic()->process();
 
         $this->assertCount(1, File::allFiles(static::$tempDir . '/some/path'));
 
@@ -34,7 +34,7 @@ class MediaImageFactoryTest extends TestCase
 
         $this->assertCount(0, File::allFiles(static::$tempDir));
 
-        $uploadedFile = $this->testImage('food-hd-long.jpg');
+        $uploadedFile = $this->testMedia('food-hd-long.jpg');
 
         Media::imageFactory($uploadedFile)->process();
 

@@ -60,9 +60,9 @@ class MakeImageVariationsActionTest extends TestCase
 
     protected function uploadImageToDisk($path = 'some/path/name.jpg')
     {
-        $uploadedFile = $this->testImage('food-hd.jpg');
+        $uploadedFile = $this->testMedia('food-hd.jpg');
 
-        Media::imageFactory($uploadedFile, $path, Storage::disk('local'))->visibilityPublic()->process();
+        Media::imageFactory($uploadedFile, $path, 'local')->visibilityPublic()->process();
 
         return $path;
     }

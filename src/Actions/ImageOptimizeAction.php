@@ -2,6 +2,8 @@
 
 namespace Apsonex\Media\Actions;
 
+use Apsonex\Media\Tests\ArrayLogger;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
 use Illuminate\Support\Facades\Log;
@@ -48,18 +50,20 @@ class ImageOptimizeAction
     protected TemporaryDirectory $tempDir;
     protected ?Filesystem $targetDisk = null;
     protected ?string $tempDirLocation = null;
+    protected bool $isSvg = false;
 
     /**
      * Callback called when finished
      */
     protected mixed $onFinishCallback = null;
+    protected ?string $svg = null;
 
     /**
      * Queue self
      */
     public static function queue(string $srcDisk, string $from, string $to = null, string $targetDisk = null, $quality = 85, mixed $onFinishCallback = null, $onQueue = 'default')
     {
-        dispatch(function () use ($srcDisk, $from, $to, $targetDisk, $quality, $onFinishCallback) {
+        return dispatch(function () use ($srcDisk, $from, $to, $targetDisk, $quality, $onFinishCallback) {
             ImageOptimizeAction::make(
                 srcDisk: $srcDisk,
                 from: $from,
@@ -91,7 +95,13 @@ class ImageOptimizeAction
      */
     public function optimize(): bool
     {
-        $this->makeInterventionImage();
+        $this->isSvg = pathinfo($this->from, PATHINFO_EXTENSION) === 'svg';
+
+        if ($this->isSvg) {
+            $this->makeSvgImage();
+        } else {
+            $this->makeInterventionImage();
+        }
 
         $this->createTempDir();
 
@@ -106,17 +116,24 @@ class ImageOptimizeAction
         return true;
     }
 
+    protected function makeSvgImage(): void
+    {
+        if (!$this->svg = $this->getFile()) return;
+
+        $this->visibility = $this->srcDisk->getVisibility($this->from);
+
+        $this->extension = 'svg';
+    }
+
     /**
      * Make Intervention Image Instance
      */
-    protected function makeInterventionImage()
+    protected function makeInterventionImage(): void
     {
         //$image = $this->srcDisk->get($this->from);
         if (!$image = $this->getFile()) return;
 
         $this->image = (new ImageManager(['driver' => $this->driver]))->make($image);
-
-        $this->originalSize = $this->image->filesize() ?: 0;
 
         $this->visibility = $this->srcDisk->getVisibility($this->from);
 
@@ -125,7 +142,7 @@ class ImageOptimizeAction
         $image = null;
     }
 
-    protected function getFile()
+    protected function getFile(): bool|string|null
     {
         try {
             return $this->srcDisk->get($this->from);
@@ -155,7 +172,7 @@ class ImageOptimizeAction
     /**
      * Create Temporary Directory
      */
-    protected function createTempDir()
+    protected function createTempDir(): void
     {
         $this->tempDir = $this->temporaryDirectory();
 
@@ -165,9 +182,21 @@ class ImageOptimizeAction
     /**
      * Optimize in temporary directory
      */
-    protected function optimizeInTempDir()
+    protected function optimizeInTempDir(): void
     {
-        $this->image->save($this->tempPath);
+        if ($this->isSvg) {
+            File::put($this->tempPath, $this->svg);
+        } else {
+            $this->image->save($this->tempPath);
+        }
+
+        $this->originalSize = File::size($this->tempPath);
+
+        //        $chain = $this->getFreshOptimizer();
+
+        //        if (App::environment('testing')) {
+        //            $chain->useLogger(app()->make(ArrayLogger::class));
+        //        }
 
         $this->getFreshOptimizer()->optimize($this->tempPath);
 
@@ -264,7 +293,7 @@ class ImageOptimizeAction
                 ],
 
                 Svgo::class => [
-                    '--disable=cleanupIDs', // disabling because it is know to cause troubles
+                    //'--disable=cleanupIDs', // disabling because it is know to cause troubles
                 ],
 
                 Gifsicle::class => [

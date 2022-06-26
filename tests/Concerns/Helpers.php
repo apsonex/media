@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Mime\MimeTypes;
 
 trait Helpers
 {
@@ -62,9 +63,11 @@ trait Helpers
      * @param string $name
      * @return UploadedFile
      */
-    protected function testImage(string $name): UploadedFile
+    protected function testMedia(string $name): UploadedFile
     {
-        return (new UploadedFile(__DIR__ . '/../fixtures/' . $name, $name, null, true));
+        $mime = (new MimeTypes)->getMimeTypes(pathinfo($name, PATHINFO_EXTENSION))[0];
+
+        return (new UploadedFile(__DIR__ . '/../fixtures/' . $name, $name, $mime, true));
     }
 
 }

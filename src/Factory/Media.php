@@ -21,6 +21,14 @@ class Media
     {
         return SvgFactory::make($src)->path($targetPath)->storageDisk($disk);
     }
+
+    /**
+     * Make image factory
+     */
+    public function documentFactory(UploadedFile|string $src, ?string $targetPath = null, string $disk = null): DocumentFactory
+    {
+        return DocumentFactory::make($src)->path($targetPath)->storageDisk($disk);
+    }
     
     /**
      * Make image factory

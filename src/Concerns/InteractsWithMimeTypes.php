@@ -43,4 +43,11 @@ trait InteractsWithMimeTypes
     {
         return Arr::first($this->getMimeTypes()->getExtensions($mimeType));
     }
+
+    public function guessExtensionFromFilename($filename): string
+    {
+        return  $this->guessExtensionFromMimeType(
+            $this->guessMimeFromFilename($filename)
+        );
+    }
 }

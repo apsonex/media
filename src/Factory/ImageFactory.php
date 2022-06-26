@@ -10,76 +10,24 @@ use Illuminate\Support\Collection;
 use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Storage;
 use Apsonex\Media\Actions\ImageOptimizeAction;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Concerns\InteractsWithOptimizer;
-use Apsonex\Media\Concerns\InteractsWithMimeTypes;
 use Apsonex\Media\Actions\MakeImageVariationsAction;
 use Apsonex\Media\Concerns\InteractWithTemporaryDirectory;
 
-class ImageFactory
+class ImageFactory extends BaseFactory implements FactoryContract
 {
 
     use InteractsWithOptimizer;
-    use InteractsWithMimeTypes;
+
     use InteractWithTemporaryDirectory;
 
     protected string $interventionDriver = 'imagick';
 
-    protected bool|string $triggerOptimization = false;
-
-    protected int $exportQuality = 75;
-
-    protected array $optimizationOptions = [
-        'quality'         => 85,
-        'onFinishTrigger' => null,
-    ];
-
-
-    /**
-     * Factory options
-     */
-    public array $options = [
-        'disk'       => null,
-        'size'       => null,
-        'mime'       => null,
-        'visibility' => 'private',
-        'directory'  => null,
-        'filename'   => null,
-        'basename'   => null,
-        'extension'  => null,
-        'optimized'  => false,
-        'variations' => [
-            'original' => [
-                'path'      => null,
-                'filename'  => null,
-                'basename'  => null,
-                'extension' => null,
-                'optimized' => false,
-                'mime'      => null,
-                'size'      => null,
-                'width'     => null,
-                'height'    => null,
-            ]
-        ],
-    ];
 
     /**
      * Image instance
      */
     public Image $image;
-
-    /**
-     * Full target path of the images.
-     * If not provided we will make one.
-     */
-    public ?string $targetPath;
-
-    /**
-     * Storage Disk
-     */
-    public Filesystem $disk;
-
-    public string $diskName;
 
     protected ?string $encodingFormat = null;
 
@@ -87,43 +35,6 @@ class ImageFactory
         'data'  => null,
         'queue' => false,
     ];
-
-
-    /**
-     * Constructor
-     */
-    public function __construct()
-    {
-        $this->disk = Storage::disk();
-
-        $this->targetPath = null;
-    }
-
-    /**
-     * Make instance of static
-     */
-    public static function make($src, $options = []): static
-    {
-        return (new static())->mergeOptions($options)->source($src);
-    }
-
-    /**
-     * Set target path
-     */
-    public function path(?string $path = null): static
-    {
-        $this->options['path'] = $path;
-        return $this;
-    }
-
-    /**
-     * Mark visibility public
-     */
-    public function visibilityPublic(): static
-    {
-        $this->options['visibility'] = 'public';
-        return $this;
-    }
 
     /**
      * Encode Image
@@ -146,38 +57,9 @@ class ImageFactory
         return $this;
     }
 
-    /**
-     * Set Storage Disk
-     */
-    public function storageDisk(string $disk = null): static
-    {
-        $this->diskName = $disk;
-        $this->disk = $disk ? Storage::disk($disk) : Storage::disk();
-        return $this;
-    }
-
     public function exportQuality(int $quality = 75): static
     {
         $this->exportQuality = ($quality > 0 && $quality < 100) ? $quality : 75;
-        return $this;
-    }
-
-    /**
-     * Merge options
-     */
-    public function mergeOptions(array $options = []): static
-    {
-        $this->options = array_merge($this->options, $options);
-        return $this;
-    }
-
-    /**
-     * Configure to do optimization
-     */
-    public function optimize($queue = false, $optimizationOptions = []): static
-    {
-        $this->triggerOptimization = $queue ? 'queue' : true;
-        $this->optimizationOptions = array_merge($this->optimizationOptions, $optimizationOptions);
         return $this;
     }
 
@@ -188,7 +70,9 @@ class ImageFactory
     {
         $this->configure();
 
-        $this->image->encode($this->extension(), $this->exportQuality);
+        $this->image->encode(
+            $this->ext, $this->exportQuality
+        );
 
         $this->options['variations']['original'] = $this->saveToDisk();
 
@@ -196,9 +80,7 @@ class ImageFactory
             'variations' => $this->options['variations']
         ]);
 
-        $data = $this->optimizeIfRequested($data);
-
-        return $data;
+        return $this->optimizeIfRequested($data);
     }
 
     /**
@@ -233,44 +115,13 @@ class ImageFactory
 
         $this->options = array_merge($this->options, [
             'mime'      => $this->image->mime(),
-            'extension' => $this->extension(),
+            'extension' => $this->ext,
             'type'      => 'image',
         ]);
     }
 
-    protected function ensureValidPath()
-    {
-        $pathinfo = pathinfo(
-            trim($this->options['path'] ??= $this->randomName(), '/')
-        );
 
-        $dirname = $pathinfo['dirname'] === '.' ? null : $pathinfo['dirname'];
 
-        $this->options = array_merge($this->options, [
-            'path'      => implode('/', array_filter([$dirname, $pathinfo['basename']])),
-            'directory' => $dirname,
-            'basename'  => $pathinfo['basename'], // name.extension
-            'filename'  => $pathinfo['filename'], // name
-            'extension' => $pathinfo['extension'],
-        ]);
-
-    }
-
-    /**
-     * Random name
-     */
-    protected function randomName(): string
-    {
-        return md5(Str::uuid()->toString()) . '.' . $this->extension();
-    }
-
-    /**
-     * Get extension
-     */
-    protected function extension(): string
-    {
-        return static::guessExtensionFromMimeType($this->image->mime());
-    }
 
     /**
      * Check is optimization required
@@ -297,6 +148,8 @@ class ImageFactory
             $this->image = (is_object($src) && method_exists($src, 'getContent')) ?
                 $manager->make($src->getContent()) :
                 $manager->make($src);
+
+            $this->ext = $this->guessExtensionFromMimeType($this->image->mime());
 
             return $this;
 
@@ -352,7 +205,7 @@ class ImageFactory
             ->when($this->triggerOptimization === 'queue', function (Collection $variations) use ($options) {
                 $variations->each(function ($variation) use ($options) {
                     $options = array_merge($options, ['from' => $variation['path']]);
-                    ImageOptimizeAction::queue(...$data);
+                    ImageOptimizeAction::queue(...$options);
                 });
             })
             ->when($this->triggerOptimization !== 'queue', function (Collection $variations) use ($options, &$newData, &$totalNewSize) {

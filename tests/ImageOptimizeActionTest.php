@@ -15,9 +15,9 @@ class ImageOptimizeActionTest extends TestCase
     /** @test */
     public function it_optimization_skip_if_optimized_size_is_larger_than_original()
     {
-        $uploadedFile = $this->testImage('food-hd.jpg');
+        $uploadedFile = $this->testMedia('food-hd.jpg');
 
-        Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
+        Media::imageFactory($uploadedFile, 'some/path/name.jpg', 'local')->process();
 
         $size1 = Storage::disk('local')->size('some/path/name.jpg');
 
@@ -36,24 +36,21 @@ class ImageOptimizeActionTest extends TestCase
     /** @test */
     public function it_can_queue_image_optimization()
     {
+        config()->set('queue.default', 'database');
+
+        $this->withoutExceptionHandling();
+
         $this->cleanTempDir();
 
         $this->createBatchJobSchema();
 
-        $uploadedFile = $this->testImage('food-hd.jpg');
+        $uploadedFile = $this->testMedia('food-hd.jpg');
 
         $path = 'path/food-hd.jpg';
 
-        Media::imageFactory($uploadedFile, $path, Storage::disk('local'))->process();
+        Media::imageFactory($uploadedFile, $path, 'local')->queueOptimization(['quality' => 50])->process();
 
         $size1 = Storage::disk('local')->size($path);
-
-        ImageOptimizeAction::queue(
-            srcDisk: Storage::disk('local')->getConfig()['driver'],
-            from: $path,
-            targetDisk: null,
-            quality: 60
-        );
 
         $this->assertCount(1, $this->allJobs());
 
@@ -65,21 +62,4 @@ class ImageOptimizeActionTest extends TestCase
 
         $this->cleanTempDir();
     }
-
-    /** @test */
-    public function after_image_optimization_it_can_trigger_serialized_callback()
-    {
-        $uploadedFile = $this->testImage('food-hd.jpg');
-
-        Media::imageFactory($uploadedFile, 'some/path/name.jpg', Storage::disk('local'))->process();
-
-        ImageOptimizeAction::make(
-            srcDisk: Storage::disk('local')->getConfig()['driver'],
-            from: 'some/path/name.jpg',
-            targetDisk: null,
-            quality: 60,
-            onFinishCallback: new SerializationExample('guri')
-        )->optimize();
-    }
-
 }

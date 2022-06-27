@@ -2,7 +2,7 @@
 
 namespace Apsonex\Media\Tests;
 
-use Apsonex\Media\Actions\DeleteImageVariationsAction;
+use Apsonex\Media\Actions\DeleteVariationsAction;
 use Apsonex\Media\Actions\MakeImageVariationsAction;
 use Apsonex\Media\Facades\Media;
 use Apsonex\Media\Factory\ImageSize;
@@ -53,7 +53,7 @@ class MakeImageVariationsActionTest extends TestCase
 
         $this->assertCount(2, $result);
 
-        DeleteImageVariationsAction::execute(Storage::disk('local')->getConfig()['driver'], ['variations' => $result], function () {
+        DeleteVariationsAction::execute(Storage::disk('local')->getConfig()['driver'], ['variations' => $result], function () {
             dD('one');
         });
     }

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Apsonex\Media\Actions\ImageOptimizeAction;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Actions\MakeImageVariationsAction;
-use Apsonex\Media\Actions\DeleteImageVariationsAction;
+use Apsonex\Media\Actions\DeleteVariationsAction;
 
 class Media
 {
@@ -88,17 +88,17 @@ class Media
     /**
      * Delete image variations
      */
-    public function deleteImageVariations(string $diskDriver, array $variations, mixed $callback = null): bool
+    public function deleteVariations(string $diskDriver, array $variations, mixed $callback = null): bool
     {
-        return DeleteImageVariationsAction::execute($diskDriver, $variations, $callback);
+        return DeleteVariationsAction::execute($diskDriver, $variations, $callback);
     }
 
     /**
      * Queue Delete image variations
      */
-    public function queueDeleteImageVariations(string $diskDriver, array $variations, mixed $callback = null, string $onQueue = 'default')
+    public function queueDeleteVariations(string $diskDriver, array $variations, mixed $callback = null, string $onQueue = 'default')
     {
-        DeleteImageVariationsAction::queue($diskDriver, $variations, $callback, $onQueue);
+        DeleteVariationsAction::queue($diskDriver, $variations, $callback, $onQueue);
     }
 
     /**

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Concerns\HasSerializedCallback;
 
-class DeleteImageVariationsAction
+class DeleteVariationsAction
 {
 
     use HasSerializedCallback;
@@ -39,7 +39,7 @@ class DeleteImageVariationsAction
     public static function queue(string $diskDriver, array $variations, mixed $callback = null, $queueName = 'default')
     {
         dispatch(function () use ($diskDriver, $variations, $callback) {
-            DeleteImageVariationsAction::execute($diskDriver, $variations, $callback);
+            DeleteVariationsAction::execute($diskDriver, $variations, $callback);
         })->onQueue($queueName);
     }
 

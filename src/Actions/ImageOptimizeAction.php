@@ -252,7 +252,7 @@ class ImageOptimizeAction
             'originalSize'    => $this->originalSize,
             'optimizedSize'   => $this->optimizedSize,
             'diskSpaceSaving' => $this->originalSize > $this->optimizedSize ? $this->originalSize - $this->optimizedSize : 0,
-            'optimized'       => $this->optimized(),
+            'optimize'       => $this->optimized(),
             'from'            => $this->from,
             'to'              => $this->to,
             'srcDisk'         => $this->srcDisk->getConfig()['driver'],

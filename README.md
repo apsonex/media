@@ -1,0 +1,1 @@
+# Media package to work with laravel

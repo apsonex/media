@@ -17,7 +17,6 @@
   "require-dev": {
     "fakerphp/faker": "^1.19",
     "nunomaduro/collision": "^6.1",
-    "apsonex/mls-data": "dev-main",
     "orchestra/testbench": "^7.1",
     "phpunit/phpunit": "^9.5"
   },
@@ -52,15 +51,5 @@
     }
   },
   "minimum-stability": "dev",
-  "prefer-stable": true,
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "git@github.com:apsonex/mls-data.git"
-    },
-    {
-      "type": "vcs",
-      "url": "git@github.com:apsonex/rets.git"
-    }
-  ]
+  "prefer-stable": true
 }

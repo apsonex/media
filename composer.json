@@ -9,7 +9,7 @@
   "require": {
     "php": "^8.2",
     "enshrined/svg-sanitize": "^0.15.0",
-    "intervention/image": "^3.2",
+    "intervention/image": "^2.7",
     "spatie/laravel-image-optimizer": "^1.7",
     "spatie/temporary-directory": "^2.2"
   },

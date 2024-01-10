@@ -8,10 +8,10 @@
   ],
   "require": {
     "php": "^8.2",
-    "enshrined/svg-sanitize": "^0.15.4",
-    "intervention/image": "^2.7",
+    "enshrined/svg-sanitize": "^0.16.0",
+    "intervention/image": "^3.2",
     "spatie/laravel-image-optimizer": "^1.7",
-    "spatie/temporary-directory": "^2.1"
+    "spatie/temporary-directory": "^2.2"
   },
   "require-dev": {
     "laravel/framework": "^10.0"

@@ -84,6 +84,7 @@ class ImageOptimizeAction
         $self->srcDisk = Storage::disk($srcDisk);
         $self->targetDisk = $targetDisk ? Storage::disk($targetDisk) : Storage::disk($srcDisk);
         $self->from = $from;
+        $self->extension = pathinfo($from, PATHINFO_EXTENSION);
         $self->to = $to ?: $from;
         $self->quality = ($quality > 0 && $quality < 100) ? $quality : null;
         $self->onFinishCallback = $self->serializeCallback($onFinishCallback);
@@ -130,7 +131,6 @@ class ImageOptimizeAction
      */
     protected function makeInterventionImage(): void
     {
-        //$image = $this->srcDisk->get($this->from);
         if (!$image = $this->getFile()) return;
 
         $this->image = (new ImageManager(['driver' => $this->driver]))->make($image);

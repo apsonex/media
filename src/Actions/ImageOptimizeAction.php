@@ -2,24 +2,25 @@
 
 namespace Apsonex\Media\Actions;
 
-use Apsonex\Media\Tests\ArrayLogger;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
+use Illuminate\Support\Lottery;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
-use Intervention\Image\ImageManager;
+use Apsonex\Media\Tests\ArrayLogger;
 use Illuminate\Support\Facades\File;
+use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Storage;
 use Spatie\ImageOptimizer\OptimizerChain;
 use Spatie\ImageOptimizer\Optimizers\Svgo;
 use Spatie\ImageOptimizer\Optimizers\Cwebp;
 use Spatie\ImageOptimizer\Optimizers\Optipng;
-use Spatie\ImageOptimizer\Optimizers\Pngquant;
 use Spatie\ImageOptimizer\Optimizers\Gifsicle;
-use Spatie\ImageOptimizer\Optimizers\Jpegoptim;
+use Spatie\ImageOptimizer\Optimizers\Pngquant;
 use Illuminate\Contracts\Filesystem\Filesystem;
-use Spatie\TemporaryDirectory\TemporaryDirectory;
+use Spatie\ImageOptimizer\Optimizers\Jpegoptim;
 use Apsonex\Media\Concerns\HasSerializedCallback;
+use Spatie\TemporaryDirectory\TemporaryDirectory;
 use Apsonex\Media\Concerns\InteractsWithMimeTypes;
 use Apsonex\Media\Concerns\InteractsWithOptimizer;
 use Spatie\LaravelImageOptimizer\OptimizerChainFactory;
@@ -157,7 +158,7 @@ class ImageOptimizeAction
     protected function uploadToDisk()
     {
         ($this->targetDisk ?: $this->srcDisk)->put($this->to, File::get($this->tempPath), [
-            'visibility' => $this->visibility == 'public' ? 'public' : 'private'
+            // 'visibility' => $this->visibility === 'public' ? 'public' : 'private'
         ]);
     }
 
@@ -174,9 +175,18 @@ class ImageOptimizeAction
      */
     protected function createTempDir(): void
     {
-        $this->tempDir = $this->temporaryDirectory();
+        // $tmpDir  = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR); // /tmp in ubuntu, /var/folders/yd/random-code/T in mac
 
-        $this->tempPath = $this->tempDir->path(Str::uuid() . '.' . $this->extension);
+        $tmpDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . '/' . Str::ulid()->__toString();
+
+        File::ensureDirectoryExists($tmpDir);
+
+        $this->tempPath = $tmpDir . '/' . Str::uuid()->toString() . '.' . $this->extension;
+
+        // $this->tempDir = $this->temporaryDirectory();
+
+        // $this->tempPath = $this->tempDir->path(Str::uuid() . '.' . $this->extension);
+
     }
 
     /**
@@ -192,12 +202,6 @@ class ImageOptimizeAction
 
         $this->originalSize = File::size($this->tempPath);
 
-        //        $chain = $this->getFreshOptimizer();
-
-        //        if (App::environment('testing')) {
-        //            $chain->useLogger(app()->make(ArrayLogger::class));
-        //        }
-
         $this->getFreshOptimizer()->optimize($this->tempPath);
 
         $this->optimizedSize = File::size($this->tempPath);
@@ -208,20 +212,6 @@ class ImageOptimizeAction
      */
     protected function optimized(): bool
     {
-        //        Log::debug('------');
-        //
-        //        $data = [
-        //            'OptimizedSize' => $this->optimizedSize,
-        //            'OriginalSize'  => $this->originalSize,
-        //            'Optimized'     => ($this->optimizedSize < $this->originalSize ? 'true' : 'false'),
-        //            'ID'            => str($this->from)->afterLast('/')->toString(),
-        //            'DiskConfig'    => $this->srcDisk->getConfig(),
-        //        ];
-        //
-        //        Log::debug(json_encode($data));
-        //
-        //        Log::debug('------');
-
         return $this->optimizedSize < $this->originalSize;
     }
 
@@ -240,7 +230,11 @@ class ImageOptimizeAction
      */
     protected function cleanTempDir()
     {
-        $this->tempDir->delete();
+        File::delete($this->tempPath);
+
+        File::deleteDirectory(
+            pathinfo($this->tempPath, PATHINFO_DIRNAME)
+        );
     }
 
     /**
@@ -261,6 +255,12 @@ class ImageOptimizeAction
 
 
         $this->triggerCallback($this->onFinishCallback, $data);
+
+        Lottery::odds(1, 500)->winner(function () use ($data) {
+            if (function_exists('slack')) {
+                slack()->debug(json_encode($data, true));
+            }
+        });
     }
 
 

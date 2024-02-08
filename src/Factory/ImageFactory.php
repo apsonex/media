@@ -108,7 +108,7 @@ class ImageFactory extends BaseFactory implements FactoryContract
         $this->disk->put(
             $newPath,
             $this->image
-                ->fit($variation->width, $variation->height, function ($constraint) {
+                ->fit($variation->width, $variation->height, function (\Intervention\Image\Constraint $constraint) {
                     $constraint->upsize();
                 })
                 ->encode($this->options['extension'])

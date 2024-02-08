@@ -4,8 +4,8 @@ namespace Apsonex\Media\Actions;
 
 
 use Closure;
+use Exception;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Apsonex\Media\Concerns\HasSerializedCallback;
@@ -28,8 +28,7 @@ class DeleteVariationsAction
     public function __construct(
         protected string $diskDriver,
         protected array  $variations,
-    )
-    {
+    ) {
         $this->configureDisk();
     }
 
@@ -54,7 +53,6 @@ class DeleteVariationsAction
             $self->process();
             return true;
         } catch (\Exception $e) {
-            Log::alert($e->getMessage());
             return false;
         }
     }
@@ -68,9 +66,14 @@ class DeleteVariationsAction
 
         foreach ($this->variations as $nameOrIndex => $path) {
             $pathToDelete = is_array($path) ? Arr::get($path, 'path', null) : $path;
-            if ($pathToDelete) {
-                $paths[] = $pathToDelete;
+
+            if (blank($pathToDelete) && !is_string($pathToDelete)) continue;
+
+            try {
                 $this->disk->delete($pathToDelete);
+                $paths[] = $pathToDelete;
+            } catch (Exception $e) {
+                //
             }
         }
 
@@ -85,9 +88,9 @@ class DeleteVariationsAction
     protected function deleteDirectoriesIfEmpty(array $paths)
     {
         collect($paths)
-            ->map(fn($p) => pathinfo($p)['dirname'] ?? null)
+            ->map(fn ($p) => pathinfo($p)['dirname'] ?? null)
             ->filter()
-            ->filter(fn($p) => $p !== '.')
+            ->filter(fn ($p) => $p !== '.')
             ->unique()
             ->map($this->safelyDeleteDirectory());
     }

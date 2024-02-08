@@ -65,12 +65,16 @@ class ImageFactory extends BaseFactory implements FactoryContract
      */
     public function process(): array
     {
+        throw_if(empty($this->variationsData), \RuntimeException::class, "Invalid variations data for images");
+
         $this->configure();
 
         $this->image->encode(
             $this->ext,
             $this->exportQuality
         );
+
+        $this->options['variations'] = [];
 
         $this->image->backup();
 
@@ -89,7 +93,9 @@ class ImageFactory extends BaseFactory implements FactoryContract
 
         $this->image?->destroy();
 
-        return $res;
+        return array_merge($res, [
+            'size' => collect($this->options['variations'])->sum('size'),
+        ]);
     }
 
     /**
@@ -111,7 +117,6 @@ class ImageFactory extends BaseFactory implements FactoryContract
                 ->fit($variation->width, $variation->height, function (\Intervention\Image\Constraint $constraint) {
                     $constraint->upsize();
                 })
-                ->encode($this->options['extension'])
         );
 
         $size = (int)$this->disk->size($this->options['path']);

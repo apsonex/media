@@ -119,7 +119,7 @@ class ImageFactory extends BaseFactory implements FactoryContract
                 })
         );
 
-        $size = (int)$this->disk->size($this->options['path']);
+        $size = (int)$this->disk->size($newPath);
 
         return [
             'path'      => $newPath,

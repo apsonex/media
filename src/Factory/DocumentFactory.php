@@ -53,7 +53,7 @@ class DocumentFactory extends BaseFactory implements FactoryContract
     protected function saveToDisk(): array
     {
         $this->disk->put($this->options['path'], $this->file->getContent(), [
-            'visibility' => $this->options['visibility'] === 'public' ? 'public' : 'private',
+            // 'visibility' => $this->options['visibility'] === 'public' ? 'public' : 'private',
             'mime' => $this->guessMimeFromExtension($this->ext),
         ]);
 

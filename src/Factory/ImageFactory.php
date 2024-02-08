@@ -80,7 +80,11 @@ class ImageFactory extends BaseFactory implements FactoryContract
             'variations' => $this->options['variations']
         ]);
 
-        return $this->optimizeIfRequested($data);
+        $res = $this->optimizeIfRequested($data);
+
+        $this->image?->destroy();
+
+        return $res;
     }
 
     /**
@@ -89,7 +93,7 @@ class ImageFactory extends BaseFactory implements FactoryContract
     protected function saveToDisk(): array
     {
         $this->disk->put($this->options['path'], $this->image, [
-            'visibility' => $this->options['visibility'] === 'public' ? 'public' : 'private'
+            // 'visibility' => $this->options['visibility'] === 'public' ? 'public' : 'private'
         ]);
         $this->options['size'] = (int)$this->disk->size($this->options['path']);
 

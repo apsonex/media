@@ -4,9 +4,11 @@ namespace Apsonex\Media\Factory;
 
 
 use Exception;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
 use Illuminate\Support\Collection;
+use Apsonex\Media\Support\Variation;
 use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Storage;
 use Apsonex\Media\Actions\ImageOptimizeAction;
@@ -31,10 +33,7 @@ class ImageFactory extends BaseFactory implements FactoryContract
 
     protected ?string $encodingFormat = null;
 
-    protected array $variationsData = [
-        'data'  => null,
-        'queue' => false,
-    ];
+    protected array $variationsData = [];
 
     /**
      * Encode Image
@@ -48,12 +47,10 @@ class ImageFactory extends BaseFactory implements FactoryContract
     /**
      * Set Variations to be done
      */
-    public function variations(array $variations, $queue = false): static
+    public function variations(Variation $variation): static
     {
-        $this->variationsData = [
-            'data'  => $variations,
-            'queue' => $queue === true,
-        ];
+        $this->variationsData = array_merge($this->variationsData, Arr::wrap($variation));
+
         return $this;
     }
 
@@ -71,10 +68,18 @@ class ImageFactory extends BaseFactory implements FactoryContract
         $this->configure();
 
         $this->image->encode(
-            $this->ext, $this->exportQuality
+            $this->ext,
+            $this->exportQuality
         );
 
-        $this->options['variations']['original'] = $this->saveToDisk();
+        $this->image->backup();
+
+        /** @var Variation $variation */
+        foreach ($this->variationsData as $variation) {
+            $this->options['variations'][$variation->name] = $this->saveToDisk($variation);
+
+            $this->image->reset();
+        }
 
         $data = array_merge($this->baseAttributes(), [
             'variations' => $this->options['variations']
@@ -90,23 +95,37 @@ class ImageFactory extends BaseFactory implements FactoryContract
     /**
      * Save to disk
      */
-    protected function saveToDisk(): array
+    protected function saveToDisk(Variation $variation): array
     {
-        $this->disk->put($this->options['path'], $this->image, [
-            // 'visibility' => $this->options['visibility'] === 'public' ? 'public' : 'private'
-        ]);
-        $this->options['size'] = (int)$this->disk->size($this->options['path']);
+        $pathinfo = pathinfo($this->options['path']);
+
+        $dir = $pathinfo['dirname'];
+
+        $file = str($pathinfo['filename'])->slug()->toString() . '-' . $variation->suffix();
+
+        $newPath = $dir . '/' . $file . '.' . $this->options['extension'];
+
+        $this->disk->put(
+            $newPath,
+            $this->image
+                ->fit($variation->width, $variation->height, function ($constraint) {
+                    $constraint->upsize();
+                })
+                ->encode($this->options['extension'])
+        );
+
+        $size = (int)$this->disk->size($this->options['path']);
 
         return [
-            'path'      => $this->options['path'],
-            'filename'  => $this->options['filename'],
-            'basename'  => $this->options['basename'],
+            'path'      => $newPath,
+            'filename'  => $file,
+            'basename'  => $file . '.' . $this->options['extension'],
             'extension' => $this->options['extension'],
             'mime'      => $this->image->mime(),
-            'size'      => $this->options['size'],
+            'size'      => $size,
             'width'     => $this->image->width(),
             'height'    => $this->image->height(),
-            'optimize'  => false,
+            'optimized'  => false,
         ];
     }
 
@@ -156,7 +175,6 @@ class ImageFactory extends BaseFactory implements FactoryContract
             $this->ext = $this->guessExtensionFromMimeType($this->image->mime());
 
             return $this;
-
         } catch (Exception $e) {
             throw new Exception("Image source in not readable @ ImageFactory." . $e->getMessage());
         }

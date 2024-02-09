@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Intervention\Image\Image;
 use Illuminate\Support\Collection;
+use Intervention\Image\Constraint;
 use Apsonex\Media\Support\Variation;
 use Intervention\Image\ImageManager;
 use Illuminate\Support\Facades\Storage;
@@ -69,11 +70,6 @@ class ImageFactory extends BaseFactory implements FactoryContract
 
         $this->configure();
 
-        $this->image->encode(
-            $this->ext,
-            $this->exportQuality
-        );
-
         $this->options['variations'] = [];
 
         $this->image->backup();
@@ -115,8 +111,9 @@ class ImageFactory extends BaseFactory implements FactoryContract
             $newPath,
             $this->image
                 ->fit($variation->width, $variation->height, function (\Intervention\Image\Constraint $constraint) {
-                    $constraint->upsize();
+                    $constraint->aspectRatio();
                 })
+                ->encode($this->ext, $this->exportQuality)
         );
 
         $size = (int)$this->disk->size($newPath);

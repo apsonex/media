@@ -49,8 +49,8 @@ class Variation
     public function large(): static
     {
         $this->name('lg');
-        $this->width(1280);
-        $this->height(720);
+        $this->width(1284);
+        $this->height(856);
         $this->constrainAspectRatio();
         return $this;
     }

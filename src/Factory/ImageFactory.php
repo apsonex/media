@@ -30,7 +30,7 @@ class ImageFactory extends BaseFactory implements FactoryContract
     /**
      * Image instance
      */
-    public Image $image;
+    public ?Image $image;
 
     protected ?string $encodingFormat = null;
 
@@ -88,6 +88,8 @@ class ImageFactory extends BaseFactory implements FactoryContract
         $res = $this->optimizeIfRequested($data);
 
         $this->image?->destroy();
+
+        $this->image = null;
 
         return array_merge($res, [
             'size' => collect($this->options['variations'])->sum('size'),
